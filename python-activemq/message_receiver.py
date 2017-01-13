@@ -47,7 +47,7 @@ def process_options():
     checkConnection = re.match('(.*):\d{1,5}\/(.*)', options.broker, )
     if not(checkConnection):
         opts.error("The broker connection string looks a bit dodgy.  It should be something like 'localhost:5672/example'")
-    
+     
     return(options.broker, options.max_messages, options.verbose)
 
 

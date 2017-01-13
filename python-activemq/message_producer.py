@@ -94,6 +94,7 @@ class script_logger(object):
         '''
         
         self.log_flag = log_flag
+        self.start_time = datetime.datetime.now()
 
 
     def log(self, log_message):
@@ -117,6 +118,10 @@ class script_logger(object):
             self.log_flag = True
 
         self.log(log_message)
+        
+        exec_time = datetime.datetime.now() - self.start_time
+        
+        self.log("Execution time " + str(exec_time))
         self.log("Exiting with return code " + str(exit_code))
         sys.exit(exit_code)
 
