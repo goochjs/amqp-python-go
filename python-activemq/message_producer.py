@@ -11,6 +11,7 @@ Created on 11th Jan 2017
 # --- LIBRARIES --------------------------------------------------------------
 
 import argparse
+import time
 import datetime
 import sys
 import re
@@ -36,6 +37,11 @@ def process_options():
                       default=100,
                       required=False,
                       help="number of messages to send")
+    opts.add_argument("--persistent", "-p",
+                      required=False,
+                      default=False,
+                      action="store_true",
+                      help="send persistent messages")
     opts.add_argument("--verbose", "-v",
                       required=False,
                       default=False,
@@ -48,15 +54,16 @@ def process_options():
     if not(checkConnection):
         opts.error("The broker connection string looks a bit dodgy.  It should be something like 'localhost:5672/example'")
     
-    return(options.broker, options.max_messages, options.verbose)
+    return(options.broker, options.max_messages, options.persistent, options.verbose)
 
 
 # --- CLASSES ----------------------------------------------------------------
 
 class Send(MessagingHandler):
-    def __init__(self, url, messages, logger):
+    def __init__(self, url, messages, persistent, logger):
         super(Send, self).__init__()
         self.url = url
+        self.persistent = persistent
         self.sent = 0
         self.confirmed = 0
         self.total = messages
@@ -70,9 +77,14 @@ class Send(MessagingHandler):
 
     def on_sendable(self, event):
         while event.sender.credit and self.sent < self.total:
-            self.sent += 1
-            msg = Message(id=(self.sent+1), body={'sequence':(self.sent)})
+            msg = Message(
+                          id=(self.sent+1),
+                          durable=self.persistent,
+                          creation_time=time.time(),
+                          body={'sequence':(self.sent+1)}
+                          )
             event.sender.send(msg)
+            self.sent += 1
 
 
     def on_accepted(self, event):
@@ -118,9 +130,7 @@ class script_logger(object):
             self.log_flag = True
 
         self.log(log_message)
-        
         exec_time = datetime.datetime.now() - self.start_time
-        
         self.log("Execution time " + str(exec_time))
         self.log("Exiting with return code " + str(exit_code))
         sys.exit(exit_code)
@@ -130,13 +140,13 @@ class script_logger(object):
 # --- START OF MAIN ----------------------------------------------------------
 
 def main():
-    (broker, max_messages, log_flag) = process_options()
+    (broker, max_messages, persistent, log_flag) = process_options()
     
     logger = script_logger(log_flag)
     logger.log("Started")
 
     try:
-        Container(Send(broker, max_messages, logger)).run()
+        Container(Send(broker, max_messages, persistent, logger)).run()
     except KeyboardInterrupt: pass
     
     logger.stop("Finished", 0, False)
