@@ -24,13 +24,19 @@ def process_options():
     '''
     Processes command line options
     '''
-    
+
     opts = argparse.ArgumentParser(description="AMQP message producer.  Will connect to a broker and retrieve messages until stopped.")
 
-    opts.add_argument("--broker", "-b",
-                      required=True,
-                      default="localhost:5672/examples",
-                      help="connection string and queue name, separated by '/'")
+    opts.add_argument("--connection", "-c",
+                      required=False,
+                      default="localhost:5672",
+                      help="connection string")
+    opts.add_argument("--topic", "-t",
+                      required=False,
+                      help="topic name")
+    opts.add_argument("--queue", "-q",
+                      required=False,
+                      help="queue name")
     opts.add_argument("--max_messages", "-m",
                       type=int,
                       default=100,
@@ -44,43 +50,62 @@ def process_options():
     options = opts.parse_args()
 
     # Check that the connection string looks sensible
-    checkConnection = re.match('(.*):\d{1,5}\/(.*)', options.broker, )
+    checkConnection = re.match('(.*):\d{1,5}', options.connection, )
     if not(checkConnection):
-        opts.error("The broker connection string looks a bit dodgy.  It should be something like 'localhost:5672/example'")
-     
-    return(options.broker, options.max_messages, options.verbose)
+        opts.error("The broker connection string looks a bit dodgy.  It should be something like 'localhost:5672'")
+
+    # check that one and only one of topic or queue was specified
+    if options.topic and options.queue:
+        opts.error("You may only specify either a queue or a topic")
+    if not(options.topic) and not(options.queue):
+        opts.error("You must specify either a queue or a topic")
+
+    # add the correct internal protocol
+    if options.topic:
+        resource = "topic://" + options.topic
+    else:
+        resource = "queue://" + options.queue
+
+    return(options.connection, resource, options.max_messages, options.verbose)
 
 
 # --- CLASSES ----------------------------------------------------------------
 
 class Recv(MessagingHandler):
-    def __init__(self, url, count, logger):
+    def __init__(self, url, resource, count, logger):
         super(Recv, self).__init__()
         self.url = url
+        self.resource = resource
         self.expected = count
-        self.received = 0
+        self.received = []
+        self.count = 0
         self.logger = logger
 
 
     def on_start(self, event):
-        event.container.create_receiver(self.url)
-        self.logger.log("Connected to " + self.url)
+        messaging_connection = event.container.connect(self.url)
+        event.container.create_receiver(messaging_connection, self.resource)
+        self.logger.log("Connected to " + self.url + "/" + self.resource)
 
 
     def on_message(self, event):
-        if event.message.id and event.message.id < self.received:
-            # ignore duplicate message
+        if event.message.id and event.message.id in self.received:
             self.logger.log("Duplicate message received " + str(event.message.body))
             return
-        
-        if self.expected == 0 or self.received < self.expected:
-            print(event.message.body)
-            self.received += 1
-            if self.received == self.expected:
-                event.receiver.close()
-                event.connection.close()
-                self.logger.log(str(self.received) + " messages received")
-                self.logger.log("Disconnected from " + self.url)
+
+        print(event.message.id)
+        print(event.message.body)
+
+        self.count += 1
+        if event.message.id:
+            self.received.append(event.message.id)
+
+        if self.count == self.expected:
+            event.receiver.close()
+            event.connection.close()
+            self.logger.log(str(self.count) + " messages received")
+            self.logger.log("Disconnected from " + self.url)
+
 
 
 class script_logger(object):
@@ -88,7 +113,7 @@ class script_logger(object):
         '''
         Script control class for logging messages (if required) and stopping execution
         '''
-        
+
         self.log_flag = log_flag
         self.start_time = datetime.datetime.now()
 
@@ -97,7 +122,7 @@ class script_logger(object):
         '''
         Prints a timestamped log message
         '''
-    
+
         if self.log_flag:
             time_stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
             print (time_stamp + " " + log_message)
@@ -106,10 +131,10 @@ class script_logger(object):
     def stop(self, log_message, exit_code, override_flag):
         '''
         Stops the script, logging an output message and setting a return code
-        
+
         The override flag parameter will force a log message, even if the script has been called in non-logging mode
         '''
-    
+
         if override_flag:
             self.log_flag = True
 
@@ -120,19 +145,20 @@ class script_logger(object):
         sys.exit(exit_code)
 
 
-    
+
 # --- START OF MAIN ----------------------------------------------------------
 
 def main():
-    (broker, max_messages, log_flag) = process_options()
-    
+    (url, resource, max_messages, log_flag) = process_options()
+
     logger = script_logger(log_flag)
     logger.log("Started")
 
     try:
-        Container(Recv(broker, max_messages, logger)).run()
-    except KeyboardInterrupt: pass
-    
+        Container(Recv(url, resource, max_messages, logger)).run()
+    except KeyboardInterrupt:
+        logger.log("Keyboard interrupt received")
+
     logger.stop("Finished", 0, False)
 
 
