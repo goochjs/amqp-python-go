@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 '''
 Created on 11th Jan 2017
 
@@ -10,10 +11,13 @@ Created on 11th Jan 2017
 
 # --- LIBRARIES --------------------------------------------------------------
 
+import sys
+if sys.version_info[0] < 3:
+    raise Exception("Python 3 or a more recent version is required.")
+
 import argparse
 import time
 import datetime
-import sys
 import re
 import uuid
 
@@ -31,30 +35,30 @@ def process_options():
     opts = argparse.ArgumentParser(description="AMQP message producer.  Will connect to a broker and publish messages until stopped.")
 
     opts.add_argument("--connection", "-c",
-                      required=False,
-                      default="localhost:5672",
-                      help="connection string")
+        required=False,
+        default="localhost:5672",
+        help="connection string")
     opts.add_argument("--topic", "-t",
-                      required=False,
-                      help="topic name")
+        required=False,
+        help="topic name")
     opts.add_argument("--queue", "-q",
-                      required=False,
-                      help="queue name")
+        required=False,
+        help="queue name")
     opts.add_argument("--max_messages", "-m",
-                      type=int,
-                      default=100,
-                      required=False,
-                      help="number of messages to send")
+        type=int,
+        default=100,
+        required=False,
+        help="number of messages to send")
     opts.add_argument("--persistent", "-p",
-                      required=False,
-                      default=False,
-                      action="store_true",
-                      help="send persistent messages")
+        required=False,
+        default=False,
+        action="store_true",
+        help="send persistent messages")
     opts.add_argument("--verbose", "-v",
-                      required=False,
-                      default=False,
-                      action="store_true",
-                      help="send log messages to sysout")
+        required=False,
+        default=False,
+        action="store_true",
+        help="send log messages to sysout")
     options = opts.parse_args()
 
     # Check that the connection string looks sensible
@@ -102,6 +106,7 @@ class Send(MessagingHandler):
             msg = Message(
                           id=(str(uuid.uuid4())),
                           durable=self.persistent,
+                          subject="fred",
                           creation_time=time.time(),
                           body={'sequence':(self.sent+1)}
                           )

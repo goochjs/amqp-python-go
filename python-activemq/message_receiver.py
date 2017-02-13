@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 '''
 Created on 13th Jan 2017
 
@@ -10,9 +11,12 @@ Created on 13th Jan 2017
 
 # --- LIBRARIES --------------------------------------------------------------
 
+import sys
+if sys.version_info[0] < 3:
+    raise Exception("Python 3 or a more recent version is required.")
+
 import argparse
 import datetime
-import sys
 import re
 
 from proton.handlers import MessagingHandler
@@ -28,25 +32,25 @@ def process_options():
     opts = argparse.ArgumentParser(description="AMQP message producer.  Will connect to a broker and retrieve messages until stopped.")
 
     opts.add_argument("--connection", "-c",
-                      required=False,
-                      default="localhost:5672",
-                      help="connection string")
+        required=False,
+        default="localhost:5672",
+        help="connection string")
     opts.add_argument("--topic", "-t",
-                      required=False,
-                      help="topic name")
+        required=False,
+        help="topic name")
     opts.add_argument("--queue", "-q",
-                      required=False,
-                      help="queue name")
+        required=False,
+        help="queue name")
     opts.add_argument("--max_messages", "-m",
-                      type=int,
-                      default=100,
-                      required=True,
-                      help="number of messages to receive before stopping. Setting '0' retrieves indefinitely")
+        type=int,
+        default=100,
+        required=True,
+        help="number of messages to receive before stopping. Setting '0' retrieves indefinitely")
     opts.add_argument("--verbose", "-v",
-                      required=False,
-                      default=False,
-                      action="store_true",
-                      help="send log messages to sysout")
+        required=False,
+        default=False,
+        action="store_true",
+        help="send log messages to sysout")
     options = opts.parse_args()
 
     # Check that the connection string looks sensible
@@ -66,7 +70,11 @@ def process_options():
     else:
         resource = "queue://" + options.queue
 
-    return(options.connection, resource, options.max_messages, options.verbose)
+    return(
+        options.connection,
+        resource,
+        options.max_messages,
+        options.verbose)
 
 
 # --- CLASSES ----------------------------------------------------------------
@@ -93,8 +101,7 @@ class Recv(MessagingHandler):
             self.logger.log("Duplicate message received " + str(event.message.body))
             return
 
-        print(event.message.id)
-        print(event.message.body)
+        print(event.message)
 
         self.count += 1
         if event.message.id:
@@ -105,7 +112,6 @@ class Recv(MessagingHandler):
             event.connection.close()
             self.logger.log(str(self.count) + " messages received")
             self.logger.log("Disconnected from " + self.url)
-
 
 
 class script_logger(object):

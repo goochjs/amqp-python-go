@@ -20,4 +20,29 @@ In the `resources` folder is a configuration file for an ActiveMQ broker.  The i
   1. Mounted on the ActiveMQ servers as /mnt/nfs-share
 - Python 3.4 running on your local machine with access to the ActiveMQ servers on port 5672
   - Alternatively, you can run the scripts directly on the ActiveMQ servers
-- **ACCESS BETWEEN ActiveMQ SERVERS??**
+- HA Proxy load balancer
+  - A configuration file for this is also provided (NB contains IP addresses, so may need adjusting for your environment)
+
+## Calling syntax
+
+The Python scripts will provide usage information id run with a `-h` flag.
+
+### Producer
+
+Publish one hundred non-persistent messages to a topic:-
+
+    python3 message_producer.py -t topic_name -m 100 -v
+
+Publish one hundred persistent messages to a queue:-
+
+    python3 message_producer.py -q queue_name -m 100 -vp
+
+### Receiver
+
+Listen for 100 messages on a topic
+
+    python3 message_receiver.py -t topic_name -m 100 -v
+
+Listen indefinitely to a queue
+
+    python3 message_receiver.py -q queue_name -m 0 -v
