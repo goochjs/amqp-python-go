@@ -13,8 +13,8 @@
 
    <!-- Allows accessing the server log -->
     <bean id="logQuery" class="io.fabric8.insight.log.log4j.Log4jLogQuery"
-          lazy-init="false" scope="singleton"
-          init-method="start" destroy-method="stop">
+        lazy-init="false" scope="singleton"
+        init-method="start" destroy-method="stop">
     </bean>
 
     <!--
@@ -24,8 +24,8 @@
 
         <destinationPolicy>
             <policyMap>
-              <policyEntries>
-                <policyEntry topic=">" >
+                <policyEntries>
+                    <policyEntry topic=">" >
                     <!-- The constantPendingMessageLimitStrategy is used to prevent
                          slow topic consumers to block producers and affect other consumers
                          by limiting the number of messages that are retained
@@ -34,11 +34,11 @@
                          http://activemq.apache.org/slow-consumer-handling.html
 
                     -->
-                  <pendingMessageLimitStrategy>
-                    <constantPendingMessageLimitStrategy limit="1000"/>
-                  </pendingMessageLimitStrategy>
-                </policyEntry>
-              </policyEntries>
+                        <pendingMessageLimitStrategy>
+                            <constantPendingMessageLimitStrategy limit="1000"/>
+                        </pendingMessageLimitStrategy>
+                    </policyEntry>
+                </policyEntries>
             </policyMap>
         </destinationPolicy>
 
@@ -72,7 +72,7 @@
             use before disabling caching and/or slowing down producers. For more information, see:
             http://activemq.apache.org/producer-flow-control.html
           -->
-          <systemUsage>
+        <systemUsage>
             <systemUsage>
                 <memoryUsage>
                     <memoryUsage percentOfJvmHeap="70" />
@@ -118,6 +118,13 @@
             <bean xmlns="http://www.springframework.org/schema/beans" class="org.apache.activemq.hooks.SpringContextHook" />
         </shutdownHooks>
 
+        <destinationInterceptors>
+            <virtualDestinationInterceptor>
+                <virtualDestinations>
+                    <virtualTopic name=">" prefix="VirtualTopicConsumers.*." selectorAware="false"/>
+                </virtualDestinations>
+            </virtualDestinationInterceptor>
+        </destinationInterceptors>
     </broker>
 
     <!--

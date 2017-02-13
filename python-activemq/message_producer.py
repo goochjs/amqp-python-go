@@ -20,6 +20,7 @@ import time
 import datetime
 import re
 import uuid
+import logging
 
 from proton import Message
 from proton.handlers import MessagingHandler
@@ -34,10 +35,10 @@ def process_options():
 
     opts = argparse.ArgumentParser(description="AMQP message producer.  Will connect to a broker and publish messages until stopped.")
 
-    opts.add_argument("--connection", "-c",
+    opts.add_argument("--broker", "-b",
         required=False,
         default="localhost:5672",
-        help="connection string")
+        help="broker connection string")
     opts.add_argument("--topic", "-t",
         required=False,
         help="topic name")
@@ -54,6 +55,9 @@ def process_options():
         default=False,
         action="store_true",
         help="send persistent messages")
+    opts.add_argument("--subject", "-s",
+        required=False,
+        help="message subject (adds header if included)")
     opts.add_argument("--verbose", "-v",
         required=False,
         default=False,
@@ -62,7 +66,7 @@ def process_options():
     options = opts.parse_args()
 
     # Check that the connection string looks sensible
-    checkConnection = re.match('(.*):\d{1,5}', options.connection, )
+    checkConnection = re.match('(.*):\d{1,5}', options.broker, )
     if not(checkConnection):
         opts.error("The broker connection string looks a bit dodgy.  It should be something like 'localhost:5672'")
 
@@ -78,21 +82,32 @@ def process_options():
     else:
         resource = "queue://" + options.queue
 
-    return(options.connection, resource, options.max_messages, options.persistent, options.verbose)
+    if options.verbose:
+        log_level = logging.DEBUG
+    else:
+        log_level = logging.INFO
+
+    return(
+        options.broker,
+        resource,
+        options.max_messages,
+        options.persistent,
+        options.subject,
+        log_level)
 
 
 # --- CLASSES ----------------------------------------------------------------
 
 class Send(MessagingHandler):
-    def __init__(self, url, resource, messages, persistent, logger):
+    def __init__(self, url, resource, messages, persistent, subject):
         super(Send, self).__init__()
         self.url = url
         self.resource = resource
         self.persistent = persistent
+        self.subject = subject
         self.sent = 0
         self.confirmed = 0
         self.total = messages
-        self.logger = logger
 
 
     def on_start(self, event):
@@ -101,15 +116,16 @@ class Send(MessagingHandler):
 
 
     def on_sendable(self, event):
-        self.logger.log("Connected to " + self.url + "/" + self.resource)
+        logging.debug(str(self.confirmed) + " messages sent")
+        logging.debug("Connected to " + self.url + "/" + self.resource)
         while event.sender.credit and self.sent < self.total:
             msg = Message(
-                          id=(str(uuid.uuid4())),
-                          durable=self.persistent,
-                          subject="fred",
-                          creation_time=time.time(),
-                          body={'sequence':(self.sent+1)}
-                          )
+                id=(str(uuid.uuid4())),
+                durable=self.persistent,
+                subject=self.subject,
+                creation_time=time.time(),
+                body={'sequence':(self.sent+1)}
+                )
             event.sender.send(msg)
             self.sent += 1
 
@@ -117,67 +133,37 @@ class Send(MessagingHandler):
     def on_accepted(self, event):
         self.confirmed += 1
         if self.confirmed == self.total:
-            self.logger.log(str(self.confirmed) + " messages sent")
+            logging.info(str(self.confirmed) + " messages sent")
             event.connection.close()
 
 
     def on_disconnected(self, event):
         self.sent = self.confirmed
-        self.logger.log("Disconnected from " + self.url)
-
-
-class script_logger(object):
-    def __init__(self, log_flag):
-        '''
-        Script control class for logging messages (if required) and stopping execution
-        '''
-
-        self.log_flag = log_flag
-        self.start_time = datetime.datetime.now()
-
-
-    def log(self, log_message):
-        '''
-        Prints a timestamped log message
-        '''
-
-        if self.log_flag:
-            time_stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
-            print (time_stamp + " " + log_message)
-
-
-    def stop(self, log_message, exit_code, override_flag):
-        '''
-        Stops the script, logging an output message and setting a return code
-
-        The override flag parameter will force a log message, even if the script has been called in non-logging mode
-        '''
-
-        if override_flag:
-            self.log_flag = True
-
-        self.log(log_message)
-        exec_time = datetime.datetime.now() - self.start_time
-        self.log("Execution time " + str(exec_time))
-        self.log("Exiting with return code " + str(exit_code))
-        sys.exit(exit_code)
-
+        logging.info("Disconnected from " + self.url)
 
 
 # --- START OF MAIN ----------------------------------------------------------
 
 def main():
-    (connection, resource, max_messages, persistent, log_flag) = process_options()
+    start_time = datetime.datetime.now()
+    (broker, resource, max_messages, persistent, subject, log_level) = process_options()
 
-    logger = script_logger(log_flag)
-    logger.log("Started")
+    logging.basicConfig(
+            level=log_level,
+            format='[%(levelname)s] (%(threadName)-10s) %(message)s',
+        )
+    logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Started")
 
     try:
-        Container(Send(connection, resource, max_messages, persistent, logger)).run()
+        Container(
+                Send(broker, resource, max_messages, persistent, subject)
+            ).run()
     except KeyboardInterrupt:
-        logger.log("Keyboard interrupt received")
+        logging.info("Keyboard interrupt received")
 
-    logger.stop("Finished", 0, False)
+    exec_time = datetime.datetime.now() - start_time
+    logging.debug("Execution time " + str(exec_time))
+    logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Finished")
 
 
 

@@ -29,20 +29,20 @@ The Python scripts will provide usage information id run with a `-h` flag.
 
 ### Producer
 
-Publish one hundred non-persistent messages to a topic:-
+Publish one hundred non-persistent messages to a topic (broker on localhost:5672)
 
     python3 message_producer.py -t topic_name -m 100 -v
 
-Publish one hundred persistent messages to a queue:-
+Publish one hundred persistent messages to a queue on a remote machine
 
-    python3 message_producer.py -q queue_name -m 100 -vp
+    python3 message_producer.py -b 127.0.1.2:5672 -q queue_name -m 100 -vp
 
 ### Receiver
 
-Listen for 100 messages on a topic
+Listen for 100 messages on a topic (broker on localhost:5672)
 
     python3 message_receiver.py -t topic_name -m 100 -v
 
-Listen indefinitely to a queue
+Listen indefinitely to a queue (broker on localhost:5672)
 
     python3 message_receiver.py -q queue_name -m 0 -v

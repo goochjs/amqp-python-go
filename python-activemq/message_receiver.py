@@ -16,6 +16,7 @@ if sys.version_info[0] < 3:
     raise Exception("Python 3 or a more recent version is required.")
 
 import argparse
+import logging
 import datetime
 import re
 
@@ -31,10 +32,10 @@ def process_options():
 
     opts = argparse.ArgumentParser(description="AMQP message producer.  Will connect to a broker and retrieve messages until stopped.")
 
-    opts.add_argument("--connection", "-c",
+    opts.add_argument("--broker", "-b",
         required=False,
         default="localhost:5672",
-        help="connection string")
+        help="broker connection string")
     opts.add_argument("--topic", "-t",
         required=False,
         help="topic name")
@@ -54,7 +55,7 @@ def process_options():
     options = opts.parse_args()
 
     # Check that the connection string looks sensible
-    checkConnection = re.match('(.*):\d{1,5}', options.connection, )
+    checkConnection = re.match('(.*):\d{1,5}', options.broker, )
     if not(checkConnection):
         opts.error("The broker connection string looks a bit dodgy.  It should be something like 'localhost:5672'")
 
@@ -71,7 +72,7 @@ def process_options():
         resource = "queue://" + options.queue
 
     return(
-        options.connection,
+        options.broker,
         resource,
         options.max_messages,
         options.verbose)
@@ -80,25 +81,24 @@ def process_options():
 # --- CLASSES ----------------------------------------------------------------
 
 class Recv(MessagingHandler):
-    def __init__(self, url, resource, count, logger):
+    def __init__(self, url, resource, count):
         super(Recv, self).__init__()
         self.url = url
         self.resource = resource
         self.expected = count
         self.received = []
         self.count = 0
-        self.logger = logger
 
 
     def on_start(self, event):
         messaging_connection = event.container.connect(self.url)
         event.container.create_receiver(messaging_connection, self.resource)
-        self.logger.log("Connected to " + self.url + "/" + self.resource)
+        logging.debug("Connected to " + self.url + "/" + self.resource)
 
 
     def on_message(self, event):
         if event.message.id and event.message.id in self.received:
-            self.logger.log("Duplicate message received " + str(event.message.body))
+            logging.error("Duplicate message received " + str(event.message.body))
             return
 
         print(event.message)
@@ -110,62 +110,31 @@ class Recv(MessagingHandler):
         if self.count == self.expected:
             event.receiver.close()
             event.connection.close()
-            self.logger.log(str(self.count) + " messages received")
-            self.logger.log("Disconnected from " + self.url)
-
-
-class script_logger(object):
-    def __init__(self, log_flag):
-        '''
-        Script control class for logging messages (if required) and stopping execution
-        '''
-
-        self.log_flag = log_flag
-        self.start_time = datetime.datetime.now()
-
-
-    def log(self, log_message):
-        '''
-        Prints a timestamped log message
-        '''
-
-        if self.log_flag:
-            time_stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
-            print (time_stamp + " " + log_message)
-
-
-    def stop(self, log_message, exit_code, override_flag):
-        '''
-        Stops the script, logging an output message and setting a return code
-
-        The override flag parameter will force a log message, even if the script has been called in non-logging mode
-        '''
-
-        if override_flag:
-            self.log_flag = True
-
-        self.log(log_message)
-        exec_time = datetime.datetime.now() - self.start_time
-        self.log("Execution time " + str(exec_time))
-        self.log("Exiting with return code " + str(exit_code))
-        sys.exit(exit_code)
+            logging.debug(str(self.count) + " messages received")
+            logging.debug("Disconnected from " + self.url)
 
 
 
 # --- START OF MAIN ----------------------------------------------------------
 
 def main():
-    (url, resource, max_messages, log_flag) = process_options()
+    start_time = datetime.datetime.now()
+    (broker, resource, max_messages, log_level) = process_options()
 
-    logger = script_logger(log_flag)
-    logger.log("Started")
+    logging.basicConfig(
+            level=log_level,
+            format='[%(levelname)s] (%(threadName)-10s) %(message)s',
+        )
+    logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Started")
 
     try:
-        Container(Recv(url, resource, max_messages, logger)).run()
+        Container(Recv(broker, resource, max_messages)).run()
     except KeyboardInterrupt:
-        logger.log("Keyboard interrupt received")
+        logging.info("Keyboard interrupt received")
 
-    logger.stop("Finished", 0, False)
+    exec_time = datetime.datetime.now() - start_time
+    logging.debug("Execution time " + str(exec_time))
+    logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Finished")
 
 
 
