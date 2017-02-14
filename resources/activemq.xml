@@ -63,7 +63,11 @@
         -->
         <persistenceAdapter>
 <!--            <kahaDB directory="${activemq.data}/kahadb"/> -->
-            <kahaDB directory="/mnt/nfs-share/activemq/data/kahadb"/>
+            <kahaDB directory="/mnt/nfs-share/activemq/data/kahadb" lockKeepAlivePeriod="1000">
+                <locker>
+                    <shared-file-locker lockAcquireSleepInterval="500"/>
+                </locker>
+            </kahaDB>
         </persistenceAdapter>
 
 

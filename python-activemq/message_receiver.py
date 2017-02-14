@@ -21,7 +21,7 @@ import datetime
 import re
 
 from proton.handlers import MessagingHandler
-from proton.reactor import Container
+from proton.reactor import Container, DurableSubscription
 
 # --- FUNCTIONS --------------------------------------------------------------
 
@@ -47,6 +47,9 @@ def process_options():
         default=100,
         required=True,
         help="number of messages to receive before stopping. Setting '0' retrieves indefinitely")
+    opts.add_argument("--subscription_name", "-n",
+        required=False,
+        help="subscription name (durable)")
     opts.add_argument("--verbose", "-v",
         required=False,
         default=False,
@@ -71,28 +74,48 @@ def process_options():
     else:
         resource = "queue://" + options.queue
 
+    if options.verbose:
+        log_level = logging.DEBUG
+    else:
+        log_level = logging.INFO
+
     return(
         options.broker,
         resource,
         options.max_messages,
-        options.verbose)
+        options.subscription_name,
+        log_level)
 
 
 # --- CLASSES ----------------------------------------------------------------
 
 class Recv(MessagingHandler):
-    def __init__(self, url, resource, count):
+    def __init__(self, url, resource, count, subscription_name):
         super(Recv, self).__init__()
         self.url = url
         self.resource = resource
         self.expected = count
+        self.subscription_name = subscription_name
         self.received = []
         self.count = 0
 
 
     def on_start(self, event):
+        if self.subscription_name:
+            logging.debug("Naming durable subscription " + self.subscription_name)
+            durable = DurableSubscription()
+        else:
+            logging.debug("Subscription will not be durable")
+            durable = None
+
         messaging_connection = event.container.connect(self.url)
-        event.container.create_receiver(messaging_connection, self.resource)
+#        logging.info(messaging_connection.clientID)
+        event.container.create_receiver(
+            messaging_connection,
+            self.resource,
+            name=self.subscription_name,
+            options=durable
+        )
         logging.debug("Connected to " + self.url + "/" + self.resource)
 
 
@@ -119,7 +142,7 @@ class Recv(MessagingHandler):
 
 def main():
     start_time = datetime.datetime.now()
-    (broker, resource, max_messages, log_level) = process_options()
+    (broker, resource, max_messages, subscription_name, log_level) = process_options()
 
     logging.basicConfig(
             level=log_level,
@@ -127,8 +150,8 @@ def main():
         )
     logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Started")
 
-    try:
-        Container(Recv(broker, resource, max_messages)).run()
+    try:r
+        Container(Recv(broker, resource, max_messages, subscription_name)).run()
     except KeyboardInterrupt:
         logging.info("Keyboard interrupt received")
 
