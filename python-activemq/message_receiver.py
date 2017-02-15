@@ -108,8 +108,10 @@ class Recv(MessagingHandler):
             logging.debug("Subscription will not be durable")
             durable = None
 
+        # Name the subscription after the script file name
+        event.container.container_id = __file__
+        
         messaging_connection = event.container.connect(self.url)
-#        logging.info(messaging_connection.clientID)
         event.container.create_receiver(
             messaging_connection,
             self.resource,
@@ -150,7 +152,7 @@ def main():
         )
     logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Started")
 
-    try:r
+    try:
         Container(Recv(broker, resource, max_messages, subscription_name)).run()
     except KeyboardInterrupt:
         logging.info("Keyboard interrupt received")
