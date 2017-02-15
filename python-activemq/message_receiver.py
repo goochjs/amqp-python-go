@@ -110,7 +110,7 @@ class Recv(MessagingHandler):
 
         # Name the subscription after the script file name
         event.container.container_id = __file__
-        
+
         messaging_connection = event.container.connect(self.url)
         event.container.create_receiver(
             messaging_connection,
@@ -133,7 +133,10 @@ class Recv(MessagingHandler):
             self.received.append(event.message.id)
 
         if self.count == self.expected:
-            event.receiver.close()
+            # If it's not a durable subscription then close the receiver
+            if not self.subscription_name:
+                event.receiver.close()
+
             event.connection.close()
             logging.debug(str(self.count) + " messages received")
             logging.debug("Disconnected from " + self.url)
