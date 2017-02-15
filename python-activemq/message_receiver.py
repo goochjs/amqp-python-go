@@ -133,8 +133,9 @@ class Recv(MessagingHandler):
             self.received.append(event.message.id)
 
         if self.count == self.expected:
-            # If it's not a durable subscription then close the receiver
-            if not self.subscription_name:
+            if self.subscription_name:
+                event.receiver.detach()
+            else:
                 event.receiver.close()
 
             event.connection.close()
