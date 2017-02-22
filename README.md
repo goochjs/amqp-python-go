@@ -6,7 +6,7 @@ For each of the two languages, there are two programs.  One will publish lots of
 
 ## ActiveMQ configuration
 
-In the `resources` folder is a configuration file for an ActiveMQ broker.  The idea is that you spin up multiple machines with this configuration and they will cluster themselves.
+In the `activemq` folder is a configuration file for an ActiveMQ broker.  The idea is that you spin up multiple machines with this configuration and they will cluster themselves.
 
 ### Pre-requisites
 
@@ -17,7 +17,7 @@ In the `resources` folder is a configuration file for an ActiveMQ broker.  The i
 - Python 3.4 running on your local machine with access to the ActiveMQ servers on port 5672
   - Alternatively, you can run the scripts directly on the ActiveMQ servers
 - HA Proxy load balancer
-  - A configuration file for this is also provided (NB contains IP addresses, so may need adjusting for your environment)
+  - A configuration file for this is provided in the `haproxy` folder (NB contains IP addresses, so may need adjusting for your environment)
 
 ## Calling syntax
 
@@ -49,15 +49,15 @@ Also provided are Dockerfiles for a standalone ActiveMQ service and the client s
 
 ### ActiveMQ
 
-From the project root directory...
+From the project root folder...
 
-    docker-compose up activemq
+    docker-compose up --build activemq
 
 This will create and run a container called `activemq_1`.
 
 ### python-message-receiver
 
-From the Python script directory...
+From the Python script folder...
 
     docker build -t python-message-receiver -f ./Dockerfile-receiver .
 
@@ -65,9 +65,9 @@ If connecting to ActiveMQ running natively on your localhost...
 
     docker run -it --rm --name python-message-receiver_1 python-message-receiver -q some_queue -m 100 -v
 
-If connecting to ActiveMQ running in a Docker container called `activemq_1`...
+If connecting to ActiveMQ running in a Docker container called `activemq_1` (requiring an ID and password)...
 
-    docker run -it --rm --name python-message-receiver_1 --network container:activemq_1 python-message-receiver -q some_queue -m 0 -v -n python-message-receiver-client
+    docker run -it --rm --name python-message-receiver_1 --network container:activemq_1 python-message-receiver -b user:password@localhost:5672 -q some_queue -m 0 -v -n python-message-receiver-client
 
 If connecting to ActiveMQ running somewhere else...
 
@@ -79,13 +79,13 @@ Similarly for the `message_producer`...
 
     docker build -t python-message-producer -f ./Dockerfile-producer .
 
-    docker run -it --rm --name python-message-producer_1 --network container:activemq_1 python-message-producer -t some_topic -m 10 -vp
+    docker run -it --rm --name python-message-producer_1 --network container:activemq_1 python-message-producer -b user:password@localhost:5672 -t some_topic -m 10 -vp
 
 ..etc etc
 
 ### go-electron
 
-The Go clients are run from within a bash shell.  From within the `go-electron` directory...
+The Go clients are run from within a bash shell.  From within the `go-electron` folder...
 
     docker build -t go-electron .
 

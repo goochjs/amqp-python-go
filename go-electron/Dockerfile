@@ -39,7 +39,7 @@ RUN go-wrapper download \
 	qpid.apache.org/electron
 
 # Copy application to the container
-ADD . /usr/src/go-electron
+COPY . /usr/src/go-electron
 
 # Change working directory back
 WORKDIR /usr/src/go-electron
