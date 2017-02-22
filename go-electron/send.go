@@ -10,8 +10,8 @@ import (
 	"qpid.apache.org/electron"
 )
 
-const QUEUE_ORDER_CREATED = "sainsburys.customer.order.v1.created"
-const NUMBER_OF_MESSAGES = 10000
+const amqpResourceName = "thingy"
+const numberOfMessages = 10
 
 var wait sync.WaitGroup
 var container electron.Container
@@ -23,8 +23,6 @@ func Debugf(format string, data ...interface{}) {
 }
 
 func main() {
-	//urlStr := "amqp:queue//" + QUEUE_ORDER_CREATED
-	//urlStr := "amqp://queue:sainsburys.customer.order.v1.created"
 	urlStr := "amqp://localhost:5672"
 
 	sentChan = make(chan electron.Outcome) // Channel to receive acknowledgements.
@@ -39,7 +37,7 @@ func main() {
 	go Produce(urlStr)
 
 	// Wait for all the acknowledgements
-	expect := int(NUMBER_OF_MESSAGES)
+	expect := int(numberOfMessages)
 	Debugf("Started senders, expect %v acknowledgements\n", expect)
 	for i := 0; i < expect; i++ {
 		out := <-sentChan // Outcome of async sends.
@@ -66,11 +64,9 @@ func Produce(urlStr string) {
 	if url, err := amqp.ParseURL(urlStr); err == nil {
 		if c, err := container.Dial("tcp", url.Host); err == nil {
 			connections <- c // Save connection so we can Close() when main() ends
-			//if s, err := c.Sender(electron.Target("topic://" + url.Path)); err == nil {
-			//if s, err := c.Sender(electron.Target("queue://" + QUEUE_ORDER_CREATED)); err == nil {
-			if s, err := c.Sender(electron.Target("topic://" + QUEUE_ORDER_CREATED)); err == nil {
+			if s, err := c.Sender(electron.Target("topic://" + amqpResourceName)); err == nil {
 				// Loop sending messages.
-				for i := int64(0); i < NUMBER_OF_MESSAGES; i++ {
+				for i := int64(0); i < numberOfMessages; i++ {
 					m := amqp.NewMessage()
 					body := fmt.Sprintf("%v%v", url.Path, i)
 					m.Marshal(body)

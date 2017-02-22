@@ -1,12 +1,8 @@
-# Python ActiveMQ
+# AMQP ActiveMQ Python Go
 
-I needed to set up an environment wherein I could demonstrate and investigate ActiveMQ, AMQP, clustering, failover, etc.
+I needed to set up an environment wherein I could demonstrate and investigate ActiveMQ, AMQP, clustering, failover, etc and connect from clients written in both Python and Go.
 
-I chose to do this in Python, as I was working with some developers who were having trouble connecting to the message bus and so wanted a working example.
-
-One of these scripts will  publish lots of messages (within each of which is a sequence number) to a topic or a queue.  The other will subscribe to the topic or connect to the queue and pull the messages down.  The subscription can be durable or ephemeral.
-
-The intent is run the scripts across an ActiveMQ cluster and then try to shoot various elements of it down to see how it fails.
+For each of the two languages, there are two programs.  One will publish lots of messages to a topic or a queue.  The other will subscribe to the topic or connect to the queue and pull the messages down.  The subscription can be durable or ephemeral.
 
 ## ActiveMQ configuration
 
@@ -49,9 +45,9 @@ Listen indefinitely to a queue (via localhost:5672)
 
 ## Docker
 
-Also provided are Dockerfiles for the client scripts.  These include the installation of the necessary qpid-proton lbraries.
+Also provided are Dockerfiles for the client scripts.  These include the installation of the necessary [qpid-proton](https://qpid.apache.org/proton/index.html) and [qpid-electron](https://godoc.org/qpid.apache.org/electron) lbraries.
 
-### Receiver
+### python-message-receiver
 
 From the Python script directory...
 
@@ -59,17 +55,17 @@ From the Python script directory...
 
 If connecting to ActiveMQ running natively on your localhost...
 
-    docker run -it --rm --name python-message-receiver_1 python-message-receiver -q queue_name -m 100 -v
+    docker run -it --rm --name python-message-receiver_1 python-message-receiver -q some_queue -m 100 -v
 
-If connecting to ActiveMQ running in a different Docker container on your localhost then (NB change `PUT_NAME_HERE` as appropriate)...
+If connecting to ActiveMQ running in a Docker container called `PUT_NAME_HERE`...
 
     docker run -it --rm --name python-message-receiver_1 --network container:PUT_NAME_HERE python-message-receiver -q some_queue -m 0 -v
 
 If connecting to ActiveMQ running somewhere else...
 
-    docker run -it --rm --name python-message-receiver_1 python-message-receiver -b 127.0.1.2:5672 -q queue_name -m 100 -v
+    docker run -it --rm --name python-message-receiver_1 python-message-receiver -b 127.0.1.2:5672 -t some_topic -m 100 -v
 
-### Producer
+### python-message-producer
 
 Similarly for the `message_producer`...
 
@@ -78,3 +74,16 @@ Similarly for the `message_producer`...
     docker run -it --rm --name python-message-producer_1 --network container:PUT_NAME_HERE python-message-producer -q queue_name -m 10
 
 ..etc etc
+
+### go-electron
+
+The Go clients are run from within a bash shell.  From within the `go-electron` directory...
+
+    docker build -t go-electron .
+
+To run the Go clients, connecting to an ActiveMQ running within a container called `PUT_NAME_HERE`...
+
+    docker run -it -d --name go-electron_1 -v ${PWD}:/usr/src/go-electron --network container:PUT_NAME_HERE go-electron bash
+    docker exec -it go-electron_1 bash
+    go run send.go
+    go run receive.go

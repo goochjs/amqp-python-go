@@ -10,8 +10,8 @@ import (
 	"qpid.apache.org/electron"
 )
 
-// QueueOrderCreated the queue/topic to publish to
-const QueueOrderCreated = "sainsburys.customer.order.v1.created"
+// AmqpResourceName the queue/topic to publish to
+const AmqpResourceName = "thingy"
 
 // NumberOfMessages how many messages to send
 const NumberOfMessages = 100
@@ -19,7 +19,7 @@ const NumberOfMessages = 100
 // SubscriptionName how to identify the durable subscription name
 var SubscriptionName = fmt.Sprintf("receive-sub[%v]", os.Getpid())
 
-var wait1 sync.WaitGroup
+var wait sync.WaitGroup
 var container electron.Container
 var linkSettings electron.LinkSettings
 var connections chan electron.Connection
@@ -35,8 +35,8 @@ func main() {
 	defer close(messages)
 	urlStr := "amqp://localhost:5672"
 
-	var wait1 sync.WaitGroup // Used by main() to wait for all goroutines to end.
-	wait1.Add(1)             // Wait for one goroutine per URL.
+	var wait sync.WaitGroup // Used by main() to wait for all goroutines to end.
+	wait.Add(1)             // Wait for one goroutine per URL.
 
 	container = electron.NewContainer(fmt.Sprintf("receive-client[%v]", os.Getpid()))
 	connections = make(chan electron.Connection, 1) // Connections to close on exit
@@ -63,25 +63,18 @@ func main() {
 		Debugf("close %s", c)
 		c.Close(nil)
 	}
-	wait1.Wait() // Wait for all goroutines to finish.
+	wait.Wait() // Wait for all goroutines to finish.
 }
 
 // Consume pull the messages off the queue/topic
 func Consume(urlStr string) {
-	defer wait1.Done() // Notify main() when this goroutine is done.
+	defer wait.Done() // Notify main() when this goroutine is done.
 	var err error
 	if url, err := amqp.ParseURL(urlStr); err == nil {
 		if c, err := container.Dial("tcp", url.Host); err == nil {
 			connections <- c // Save connection so we can Close() when main() ends
 
-			//electron.Source("topic://"+QueueOrderCreated), electron.LinkName(SubscriptionName)
-			//linkSettings = electron.LinkOption()
-			//linkSettings.Source("topic://" + QueueOrderCreated)
-			//linkSettings.LinkName(SubscriptionName)
-
-			if r, err := c.Receiver(electron.LinkName(SubscriptionName), electron.Source("topic://"+QueueOrderCreated)); err == nil {
-				//r.Source() = "topic://" + QueueOrderCreated
-
+			if r, err := c.Receiver(electron.LinkName(SubscriptionName), electron.Source("topic://"+AmqpResourceName)); err == nil {
 				// Loop receiving messages and sending them to the main() goroutine
 				for {
 					if rm, err := r.Receive(); err == nil {
