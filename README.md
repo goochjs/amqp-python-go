@@ -59,15 +59,15 @@ From the Python script directory...
 
 If connecting to ActiveMQ running natively on your localhost...
 
-    docker run -it --rm --name python-message-receiver-container python-message-receiver -q queue_name -m 100 -v
+    docker run -it --rm --name python-message-receiver_1 python-message-receiver -q queue_name -m 100 -v
 
 If connecting to ActiveMQ running in a different Docker container on your localhost then (NB change `PUT_NAME_HERE` as appropriate)...
 
-    docker run -it --rm --name python-message-receiver-running --network container:PUT_NAME_HERE python-message-receiver -q some_queue -m 0 -v
+    docker run -it --rm --name python-message-receiver_1 --network container:PUT_NAME_HERE python-message-receiver -q some_queue -m 0 -v
 
 If connecting to ActiveMQ running somewhere else...
 
-    docker run -it --rm --name python-message-receiver-container python-message-receiver -b 127.0.1.2:5672 -q queue_name -m 100 -v
+    docker run -it --rm --name python-message-receiver_1 python-message-receiver -b 127.0.1.2:5672 -q queue_name -m 100 -v
 
 ### Producer
 
@@ -75,6 +75,6 @@ Similarly for the `message_producer`...
 
     docker build -t python-message-producer -f ./Dockerfile-producer .
 
-    docker run -it --rm --name python-message-producer-running --network container:PUT_NAME_HERE python-message-producer -q queue_name -m 10
+    docker run -it --rm --name python-message-producer_1 --network container:PUT_NAME_HERE python-message-producer -q queue_name -m 10
 
 ..etc etc
