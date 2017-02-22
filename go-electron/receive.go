@@ -11,7 +11,7 @@ import (
 )
 
 // AmqpResourceName the queue/topic to publish to
-const AmqpResourceName = "thingy"
+const AmqpResourceName = "some_topic"
 
 // NumberOfMessages how many messages to send
 const NumberOfMessages = 100
@@ -26,8 +26,8 @@ var connections chan electron.Connection
 var sentChan chan electron.Outcome
 var messages chan amqp.Message
 
-// Debugf print a helpful message
-func Debugf(format string, data ...interface{}) {
+// debugf print a helpful message
+func debugf(format string, data ...interface{}) {
 	log.Printf(format, data...)
 }
 func main() {
@@ -43,8 +43,8 @@ func main() {
 
 	// Start a goroutine to for each URL to receive messages and send them to the messages channel.
 	// main() receives and prints them.
-	Debugf("Connecting to %s\n", urlStr)
-	go Consume(urlStr) // Start the goroutine
+	debugf("Connecting to %s\n", urlStr)
+	go consume(urlStr) // Start the goroutine
 
 	// All goroutines are started, we are receiving messages.
 	fmt.Printf("Listening on %d connections\n", 1)
@@ -52,7 +52,7 @@ func main() {
 	// print each message until the count is exceeded.
 	for i := uint64(0); i < NumberOfMessages; i++ {
 		m := <-messages
-		Debugf("%v\n", m.Body())
+		debugf("%v\n", m.Body())
 	}
 	fmt.Printf("Received %d messages\n", NumberOfMessages)
 
@@ -60,14 +60,14 @@ func main() {
 	// with electron.Closed.
 	for i := 0; i < NumberOfMessages; i++ {
 		c := <-connections
-		Debugf("close %s", c)
+		debugf("close %s", c)
 		c.Close(nil)
 	}
 	wait.Wait() // Wait for all goroutines to finish.
 }
 
-// Consume pull the messages off the queue/topic
-func Consume(urlStr string) {
+// consume pull the messages off the queue/topic
+func consume(urlStr string) {
 	defer wait.Done() // Notify main() when this goroutine is done.
 	var err error
 	if url, err := amqp.ParseURL(urlStr); err == nil {

@@ -10,7 +10,7 @@ import (
 	"qpid.apache.org/electron"
 )
 
-const amqpResourceName = "thingy"
+const amqpResourceName = "some_topic"
 const numberOfMessages = 10
 
 var wait sync.WaitGroup
@@ -18,7 +18,7 @@ var container electron.Container
 var connections chan electron.Connection
 var sentChan chan electron.Outcome
 
-func Debugf(format string, data ...interface{}) {
+func debugf(format string, data ...interface{}) {
 	log.Printf(format, data...)
 }
 
@@ -33,18 +33,18 @@ func main() {
 	connections = make(chan electron.Connection, 1) // Connections to close on exit
 
 	// Start a goroutine
-	Debugf("Connecting to %v\n", urlStr)
-	go Produce(urlStr)
+	debugf("Connecting to %v\n", urlStr)
+	go produce(urlStr)
 
 	// Wait for all the acknowledgements
 	expect := int(numberOfMessages)
-	Debugf("Started senders, expect %v acknowledgements\n", expect)
+	debugf("Started senders, expect %v acknowledgements\n", expect)
 	for i := 0; i < expect; i++ {
 		out := <-sentChan // Outcome of async sends.
 		if out.Error != nil {
 			log.Fatalf("acknowledgement[%v] %v error: %v\n", i, out.Value, out.Error)
 		} else {
-			Debugf("acknowledgement[%v]  %v (%v)\n", i, out.Value, out.Status)
+			debugf("acknowledgement[%v]  %v (%v)\n", i, out.Value, out.Status)
 		}
 	}
 	fmt.Printf("Received all %v acknowledgements\n", expect)
@@ -58,7 +58,7 @@ func main() {
 	}
 }
 
-func Produce(urlStr string) {
+func produce(urlStr string) {
 	defer wait.Done() // Notify main() when this goroutine is done.
 	var err error
 	if url, err := amqp.ParseURL(urlStr); err == nil {

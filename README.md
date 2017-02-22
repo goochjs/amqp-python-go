@@ -2,7 +2,7 @@
 
 I needed to set up an environment wherein I could demonstrate and investigate ActiveMQ, AMQP, clustering, failover, etc and connect from clients written in both Python and Go.
 
-For each of the two languages, there are two programs.  One will publish lots of messages to a topic or a queue.  The other will subscribe to the topic or connect to the queue and pull the messages down.  The subscription can be durable or ephemeral.
+For each of the two languages, there are two programs.  One will publish lots of messages to a topic or a queue.  The other will subscribe to the topic or connect to the queue and pull the messages down.  The subscription can be durable (so that messages sent when off-line are kept for future delivery) or ephemeral.
 
 ## ActiveMQ configuration
 
@@ -27,25 +27,33 @@ The Python scripts will provide usage information id run with a `-h` flag.
 
 Publish one hundred non-persistent messages to a topic (broker or load balancer available on localhost:5672)
 
-    python3 message_producer.py -t topic_name -m 100 -v
+    python3 message_producer.py -t some_topic -m 100 -v
 
-Publish one hundred persistent messages to a queue where the broker or load balancer is on a remote machine
+Publish one hundred persistent messages to a queue where the broker (or load balancer) is on a remote machine
 
-    python3 message_producer.py -b 127.0.1.2:5672 -q queue_name -m 100 -vp
+    python3 message_producer.py -b 127.0.1.2:5672 -q some_queue -m 100 -vp
 
 ### Receiver
 
 Listen for 100 messages on a topic (via localhost:5672)
 
-    python3 message_receiver.py -t topic_name -m 100 -v
+    python3 message_receiver.py -t some_topic -m 100 -v
 
 Listen indefinitely to a queue (via localhost:5672)
 
-    python3 message_receiver.py -q queue_name -m 0 -v
+    python3 message_receiver.py -q some_queue -m 0 -v
 
 ## Docker
 
-Also provided are Dockerfiles for the client scripts.  These include the installation of the necessary [qpid-proton](https://qpid.apache.org/proton/index.html) and [qpid-electron](https://godoc.org/qpid.apache.org/electron) lbraries.
+Also provided are Dockerfiles for a standalone ActiveMQ service and the client scripts.  The latter include the installation of the necessary [qpid-proton](https://qpid.apache.org/proton/index.html) and [qpid-electron](https://godoc.org/qpid.apache.org/electron) lbraries.
+
+### ActiveMQ
+
+From the project root directory...
+
+    docker-compose up activemq
+
+This will create and run a container called `activemq_1`.
 
 ### python-message-receiver
 
@@ -57,9 +65,9 @@ If connecting to ActiveMQ running natively on your localhost...
 
     docker run -it --rm --name python-message-receiver_1 python-message-receiver -q some_queue -m 100 -v
 
-If connecting to ActiveMQ running in a Docker container called `PUT_NAME_HERE`...
+If connecting to ActiveMQ running in a Docker container called `activemq_1`...
 
-    docker run -it --rm --name python-message-receiver_1 --network container:PUT_NAME_HERE python-message-receiver -q some_queue -m 0 -v
+    docker run -it --rm --name python-message-receiver_1 --network container:activemq_1 python-message-receiver -q some_queue -m 0 -v -n python-message-receiver-client
 
 If connecting to ActiveMQ running somewhere else...
 
@@ -71,7 +79,7 @@ Similarly for the `message_producer`...
 
     docker build -t python-message-producer -f ./Dockerfile-producer .
 
-    docker run -it --rm --name python-message-producer_1 --network container:PUT_NAME_HERE python-message-producer -q queue_name -m 10
+    docker run -it --rm --name python-message-producer_1 --network container:activemq_1 python-message-producer -t some_topic -m 10 -vp
 
 ..etc etc
 
@@ -81,9 +89,9 @@ The Go clients are run from within a bash shell.  From within the `go-electron` 
 
     docker build -t go-electron .
 
-To run the Go clients, connecting to an ActiveMQ running within a container called `PUT_NAME_HERE`...
+To run the Go clients, connecting to an ActiveMQ running within a container called `activemq_1`...
 
-    docker run -it -d --name go-electron_1 -v ${PWD}:/usr/src/go-electron --network container:PUT_NAME_HERE go-electron bash
+    docker run --rm -it -d --name go-electron_1 -v ${PWD}:/usr/src/go-electron --network container:activemq_1 go-electron bash
     docker exec -it go-electron_1 bash
     go run send.go
     go run receive.go

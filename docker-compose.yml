@@ -1,0 +1,35 @@
+version: '2'
+
+services:
+    activemq:
+        container_name: activemq_1
+        image: rmohr/activemq
+        ports:
+            - "61616:61616"
+            - "8161:8161"
+            - "5672:5672"
+        volumes:
+            - activemq-data:/opt/activemq/data
+    go-electron:
+        build:
+            context: ./go-electron
+            dockerfile: Dockerfile
+        image: go-electron
+        volumes:
+            - ./go-electron:/usr/src/go-electron
+    python-message-receiver:
+        build:
+            context: ./python-proton
+            dockerfile: Dockerfile-receiver
+        image: python-message-receiver
+    python-message-producer:
+        build:
+            context: ./python-proton
+            dockerfile: Dockerfile-producer
+        image: python-message-producer
+
+volumes:
+    activemq-data:
+        driver: local
+    go-electron-data:
+        driver: local
