@@ -2,6 +2,6 @@ FROM python:3
 
 RUN pip3 install python-qpid-proton
 
-COPY . /usr/src/python-activemq
+COPY . /usr/src/python-proton
 
-ENTRYPOINT [ "python", "/usr/src/python-activemq/message_receiver.py" ]
+ENTRYPOINT [ "python", "/usr/src/python-proton/message_receiver.py" ]

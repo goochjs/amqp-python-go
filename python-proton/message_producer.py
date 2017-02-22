@@ -117,7 +117,7 @@ class Send(MessagingHandler):
 
     def on_sendable(self, event):
         logging.debug(str(self.confirmed) + " messages sent")
-        logging.debug("Connected to " + self.url + "/" + self.resource)
+        logging.debug("Connected to " + self.url + " " + self.resource)
         while event.sender.credit and self.sent < self.total:
             msg = Message(
                 id=(str(uuid.uuid4())),

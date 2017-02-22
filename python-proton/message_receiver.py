@@ -118,7 +118,7 @@ class Recv(MessagingHandler):
             name=self.subscription_name,
             options=durable
         )
-        logging.debug("Connected to " + self.url + "/" + self.resource)
+        logging.debug("Connected to " + self.url + " " + self.resource)
 
 
     def on_message(self, event):
