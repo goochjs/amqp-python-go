@@ -102,19 +102,19 @@
             <transportConnector name="amqp" uri="amqp://0.0.0.0:5672?maximumConnections=1000&amp;wireFormat.maxFrameSize=104857600"/>
             <transportConnector name="stomp" uri="stomp://0.0.0.0:61613?maximumConnections=1000&amp;wireFormat.maxFrameSize=104857600"/>
             <transportConnector name="mqtt" uri="mqtt://0.0.0.0:1883?maximumConnections=1000&amp;wireFormat.maxFrameSize=104857600"/>
-            <transportConnector name="ws" uri="ws://0.0.0.0:61614?maximumConnections=1000&amp;wireFormat.maxFrameSize=104857600"/>
+            <!-- <transportConnector name="ws" uri="ws://0.0.0.0:61614?maximumConnections=1000&amp;wireFormat.maxFrameSize=104857600"/> -->
         </transportConnectors>
 
         <plugins>
             <!-- Simple auth - to use: add "user:password@" to front of connection URL -->
-            <simpleAuthenticationPlugin>
-            <!-- <simpleAuthenticationPlugin anonymousAccessAllowed="true"> -->
+            <!-- <simpleAuthenticationPlugin>
+            <simpleAuthenticationPlugin anonymousAccessAllowed="true">
                 <users>
                     <authenticationUser username="system" password="manager" groups="users,admins"/>
                     <authenticationUser username="user" password="password" groups="users"/>
                     <authenticationUser username="guest" password="password" groups="guests"/>
                 </users>
-            </simpleAuthenticationPlugin>
+            </simpleAuthenticationPlugin> -->
         </plugins>
 
         <!-- destroy the spring context on shutdown to stop jetty -->

@@ -67,7 +67,7 @@ If connecting to ActiveMQ running natively on your localhost...
 
 If connecting to ActiveMQ running in a Docker container called `activemq_1` (requiring an ID and password)...
 
-    docker run -it --rm --name python-message-receiver_1 --network container:activemq_1 python-message-receiver -b user:password@localhost:5672 -q some_queue -m 0 -v -n python-message-receiver-client
+    docker run -it --rm --name python-message-receiver_1 --network container:activemq_1 python-message-receiver -b user:password@localhost:5672 -t some_topic -m 0 -v -n python-client
 
 If connecting to ActiveMQ running somewhere else...
 
@@ -89,9 +89,18 @@ The Go clients are run from within a bash shell.  From within the `go-electron` 
 
     docker build -t go-electron .
 
-To run the Go clients, connecting to an ActiveMQ running within a container called `activemq_1`...
+To run the Go clients, connecting to an ActiveMQ running within a container called `activemq_1`, first of all start the container...
 
     docker run --rm -it -d --name go-electron_1 -v ${PWD}:/usr/src/go-electron --network container:activemq_1 go-electron bash
+
+Then connect to it and run either the Receiver or the Sender, as per the commands below.
+
+#### Receiver
+
     docker exec -it go-electron_1 bash
-    go run send.go
-    go run receive.go
+    go run receive.go -debug -name go-client -source topic://something -count 10 amqp://localhost:5672
+
+#### Sender
+
+    docker exec -it go-electron_1 bash
+    go run send.go -debug -count 10 -dest topic://something localhost:5672

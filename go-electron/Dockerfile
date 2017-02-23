@@ -11,7 +11,9 @@ RUN apt-get update && apt-get install -y \
 	libsasl2-modules \
 	bsdtar
 
-ENV QPID_PROTON_DOWNLOAD_URL https://github.com/apache/qpid-proton/archive/master.zip
+#ENV QPID_PROTON_DOWNLOAD_URL https://github.com/apache/qpid-proton/archive/master.zip
+#ENV QPID_PROTON_DOWNLOAD_URL https://github.com/alanconway/qpid-proton/archive/go-durable-sub.zip
+ENV QPID_PROTON_DOWNLOAD_URL https://github.com/goochjs/qpid-proton/archive/go-durable-sub.zip
 
 # Make the build directory
 RUN mkdir -p /tmp/qpid-proton/build

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -10,55 +11,85 @@ import (
 	"qpid.apache.org/electron"
 )
 
-// AmqpResourceName the queue/topic to publish to
-const AmqpResourceName = "some_topic"
-
-// NumberOfMessages how many messages to send
-const NumberOfMessages = 100
-
-// SubscriptionName how to identify the durable subscription name
-var SubscriptionName = fmt.Sprintf("receive-sub[%v]", os.Getpid())
-
-var wait sync.WaitGroup
-var container electron.Container
-var linkSettings electron.LinkSettings
-var connections chan electron.Connection
-var sentChan chan electron.Outcome
-var messages chan amqp.Message
-
-// debugf print a helpful message
-func debugf(format string, data ...interface{}) {
-	log.Printf(format, data...)
+// Usage and command-line flags
+func usage() {
+	fmt.Fprintf(os.Stderr, `Usage: %s url [url ...]
+Receive messages from all the listed URLs concurrently and print them.
+`, os.Args[0])
+	flag.PrintDefaults()
 }
+
+var count = flag.Uint64("count", 1, "Stop after receiving this many messages.")
+var subName = flag.String("name", "", "Subscription name (if durable required)")
+var messageSource = flag.String("source", "topic://some_topic", "[topic|queue]://{name}")
+var debug = flag.Bool("debug", false, "Print detailed debug output")
+var debugf = func(format string, data ...interface{}) {} // Default no debugging output
+
 func main() {
-	messages = make(chan amqp.Message) // Channel for messages from goroutines to main()
+	flag.Usage = usage
+	flag.Parse()
+
+	if *debug {
+		debugf = func(format string, data ...interface{}) { log.Printf(format, data...) }
+	}
+	urls := flag.Args() // Non-flag arguments are URLs to receive from
+	if len(urls) == 0 {
+		log.Println("No URL provided")
+		usage()
+		os.Exit(1)
+	}
+
+	messages := make(chan amqp.Message) // Channel for messages from goroutines to main()
 	defer close(messages)
-	urlStr := "amqp://localhost:5672"
 
 	var wait sync.WaitGroup // Used by main() to wait for all goroutines to end.
-	wait.Add(1)             // Wait for one goroutine per URL.
+	wait.Add(len(urls))     // Wait for one goroutine per URL.
 
-	container = electron.NewContainer(fmt.Sprintf("receive-client[%v]", os.Getpid()))
-	connections = make(chan electron.Connection, 1) // Connections to close on exit
+	container := electron.NewContainer(fmt.Sprintf("receive[%v]", os.Getpid()))
+	connections := make(chan electron.Connection, len(urls)) // Connections to close on exit
 
 	// Start a goroutine to for each URL to receive messages and send them to the messages channel.
 	// main() receives and prints them.
-	debugf("Connecting to %s\n", urlStr)
-	go consume(urlStr) // Start the goroutine
+	for _, urlStr := range urls {
+		debugf("Connecting to %s\n", urlStr)
+		go func(urlStr string) { // Start the goroutine
+			defer wait.Done() // Notify main() when this goroutine is done.
+			url, err := amqp.ParseURL(urlStr)
+			fatalIf(err)
+			c, err := container.Dial("tcp", url.Host)
+			fatalIf(err)
+			connections <- c // Save connection so we can Close() when main() ends
+			debugf("Message source %s\n", *messageSource)
+			debugf("Subscription name %s\n", *subName)
+			r, err := c.Receiver(electron.LinkName(*subName), electron.Source(*messageSource))
+			fatalIf(err)
+			// Loop receiving messages and sending them to the main() goroutine
+			for {
+				if rm, err := r.Receive(); err == nil {
+					rm.Accept()
+					messages <- rm.Message
+				} else if err == electron.Closed {
+					return
+				} else {
+					log.Fatal("receive error %v: %v", urlStr, err)
+				}
+			}
+		}(urlStr)
+	}
 
 	// All goroutines are started, we are receiving messages.
-	fmt.Printf("Listening on %d connections\n", 1)
+	fmt.Printf("Listening on %d connections\n", len(urls))
 
 	// print each message until the count is exceeded.
-	for i := uint64(0); i < NumberOfMessages; i++ {
+	for i := uint64(0); i < *count; i++ {
 		m := <-messages
 		debugf("%v\n", m.Body())
 	}
-	fmt.Printf("Received %d messages\n", NumberOfMessages)
+	fmt.Printf("Received %d messages\n", *count)
 
 	// Close all connections, this will interrupt goroutines blocked in Receiver.Receive()
 	// with electron.Closed.
-	for i := 0; i < NumberOfMessages; i++ {
+	for i := 0; i < len(urls); i++ {
 		c := <-connections
 		debugf("close %s", c)
 		c.Close(nil)
@@ -66,29 +97,7 @@ func main() {
 	wait.Wait() // Wait for all goroutines to finish.
 }
 
-// consume pull the messages off the queue/topic
-func consume(urlStr string) {
-	defer wait.Done() // Notify main() when this goroutine is done.
-	var err error
-	if url, err := amqp.ParseURL(urlStr); err == nil {
-		if c, err := container.Dial("tcp", url.Host); err == nil {
-			connections <- c // Save connection so we can Close() when main() ends
-
-			if r, err := c.Receiver(electron.LinkName(SubscriptionName), electron.Source("topic://"+AmqpResourceName)); err == nil {
-				// Loop receiving messages and sending them to the main() goroutine
-				for {
-					if rm, err := r.Receive(); err == nil {
-						rm.Accept()
-						messages <- rm.Message
-					} else if err == electron.Closed {
-						return
-					} else {
-						log.Fatal("receive error %v: %v", urlStr, err)
-					}
-				}
-			}
-		}
-	}
+func fatalIf(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
