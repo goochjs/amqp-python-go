@@ -61,7 +61,7 @@ func main() {
 			connections <- c // Save connection so we can Close() when main() ends
 			debugf("Message source %s\n", *messageSource)
 			debugf("Subscription name %s\n", *subName)
-			r, err := c.Receiver(electron.LinkName(*subName), electron.Source(*messageSource))
+			r, err := c.Receiver(electron.LinkName(*subName), electron.Source(*messageSource), electron.DurableSubscription())
 			fatalIf(err)
 			// Loop receiving messages and sending them to the main() goroutine
 			for {
