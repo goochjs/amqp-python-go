@@ -45,7 +45,7 @@ func main() {
 	var wait sync.WaitGroup // Used by main() to wait for all goroutines to end.
 	wait.Add(len(urls))     // Wait for one goroutine per URL.
 
-	container := electron.NewContainer(fmt.Sprintf("receive[%v]", os.Getpid()))
+	container := electron.NewContainer(fmt.Sprintf("receive.go"))
 	connections := make(chan electron.Connection, len(urls)) // Connections to close on exit
 
 	// Start a goroutine to for each URL to receive messages and send them to the messages channel.
@@ -61,7 +61,7 @@ func main() {
 			connections <- c // Save connection so we can Close() when main() ends
 			debugf("Message source %s\n", *messageSource)
 			debugf("Subscription name %s\n", *subName)
-			r, err := c.Receiver(electron.LinkName(*subName), electron.Source(*messageSource), electron.DurableSubscription())
+			r, err := c.Receiver(electron.Source(*messageSource), electron.DurableSubscription(*subName))
 			fatalIf(err)
 			// Loop receiving messages and sending them to the main() goroutine
 			for {

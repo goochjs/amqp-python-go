@@ -98,9 +98,9 @@ Then connect to it and run either the Receiver or the Sender, as per the command
 #### Receiver
 
     docker exec -it go-electron_1 bash
-    go run receive.go -debug -name go-client -source topic://something -count 10 amqp://localhost:5672
+    go run receive.go -debug -name go-client -source topic://some_topic -count 10 amqp://localhost:5672
 
 #### Sender
 
     docker exec -it go-electron_1 bash
-    go run send.go -debug -count 10 -dest topic://something localhost:5672
+    go run send.go -debug -count 10 -dest topic://some-topic localhost:5672
