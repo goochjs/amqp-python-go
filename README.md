@@ -103,4 +103,4 @@ Then connect to it and run either the Receiver or the Sender, as per the command
 #### Sender
 
     docker exec -it go-electron_1 bash
-    go run send.go -debug -count 10 -dest topic://some-topic localhost:5672
+    go run send.go -debug -count 10 -dest topic://some_topic localhost:5672

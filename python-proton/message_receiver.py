@@ -87,6 +87,14 @@ def process_options():
         log_level)
 
 
+def clean_url(dirty_url):
+    # removes ID and password from URL, if present
+    if "@" in dirty_url:
+        return dirty_url.split('@', 1)[1]
+    else:
+        return dirty_url
+
+
 # --- CLASSES ----------------------------------------------------------------
 
 class Recv(MessagingHandler):
@@ -108,8 +116,7 @@ class Recv(MessagingHandler):
             logging.debug("Subscription will not be durable")
             durable = None
 
-        # Name the subscription after the script file name
-        event.container.container_id = __file__
+        event.container.container_id = self.subscription_name
 
         messaging_connection = event.container.connect(self.url)
         event.container.create_receiver(
@@ -118,10 +125,15 @@ class Recv(MessagingHandler):
             name=self.subscription_name,
             options=durable
         )
-        logging.debug("Connected to " + self.url + " " + self.resource)
+        logging.debug("Connected to " + clean_url(self.url) + " " + self.resource)
 
 
     def on_message(self, event):
+        global first_message_time
+
+        if self.count == 0:
+            first_message_time = datetime.datetime.now()
+
         if event.message.id and event.message.id in self.received:
             logging.error("Duplicate message received " + str(event.message.body))
             return
@@ -139,9 +151,10 @@ class Recv(MessagingHandler):
                 event.receiver.close()
 
             event.connection.close()
-            logging.debug(str(self.count) + " messages received")
-            logging.debug("Disconnected from " + self.url)
 
+            message_processing_time = datetime.datetime.now() - first_message_time
+            logging.debug(str(self.count) + " messages received in " + str(message_processing_time))
+            logging.debug("Disconnected from " + clean_url(self.url))
 
 
 # --- START OF MAIN ----------------------------------------------------------
@@ -171,4 +184,7 @@ def main():
 
 
 if __name__ == "__main__":
+    # initialise first message time (global variable used to calculate timings)
+    first_message_time = datetime.datetime.now()
+
     main()

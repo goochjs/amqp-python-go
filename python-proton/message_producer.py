@@ -58,6 +58,9 @@ def process_options():
     opts.add_argument("--subject", "-s",
         required=False,
         help="message subject (adds header if included)")
+    opts.add_argument("--user_id", "-u",
+        required=False,
+        help="client user id")
     opts.add_argument("--verbose", "-v",
         required=False,
         default=False,
@@ -93,18 +96,28 @@ def process_options():
         options.max_messages,
         options.persistent,
         options.subject,
+        options.user_id,
         log_level)
+
+
+def clean_url(dirty_url):
+    # removes ID and password from URL, if present
+    if "@" in dirty_url:
+        return dirty_url.split('@', 1)[1]
+    else:
+        return dirty_url
 
 
 # --- CLASSES ----------------------------------------------------------------
 
 class Send(MessagingHandler):
-    def __init__(self, url, resource, messages, persistent, subject):
+    def __init__(self, url, resource, messages, persistent, subject, user_id):
         super(Send, self).__init__()
         self.url = url
         self.resource = resource
         self.persistent = persistent
         self.subject = subject
+        self.user_id = user_id
         self.sent = 0
         self.confirmed = 0
         self.total = messages
@@ -117,10 +130,18 @@ class Send(MessagingHandler):
 
     def on_sendable(self, event):
         logging.debug(str(self.confirmed) + " messages sent")
-        logging.debug("Connected to " + self.url + " " + self.resource)
+        logging.debug("Connected to " + clean_url(self.url) + " " + self.resource)
+
+        # encode the user_id if present
+        if self.user_id:
+            encoded_user_id = self.user_id.encode('utf-8')
+        else:
+            encoded_user_id = None
+
         while event.sender.credit and self.sent < self.total:
             msg = Message(
                 id=(str(uuid.uuid4())),
+                user_id=encoded_user_id,
                 durable=self.persistent,
                 subject=self.subject,
                 creation_time=time.time(),
@@ -139,14 +160,14 @@ class Send(MessagingHandler):
 
     def on_disconnected(self, event):
         self.sent = self.confirmed
-        logging.info("Disconnected from " + self.url)
+        logging.info("Disconnected from " + clean_url(self.url))
 
 
 # --- START OF MAIN ----------------------------------------------------------
 
 def main():
     start_time = datetime.datetime.now()
-    (broker, resource, max_messages, persistent, subject, log_level) = process_options()
+    (broker, resource, max_messages, persistent, subject, user_id, log_level) = process_options()
 
     logging.basicConfig(
             level=log_level,
@@ -156,13 +177,13 @@ def main():
 
     try:
         Container(
-                Send(broker, resource, max_messages, persistent, subject)
+                Send(broker, resource, max_messages, persistent, subject, user_id)
             ).run()
     except KeyboardInterrupt:
         logging.info("Keyboard interrupt received")
 
     exec_time = datetime.datetime.now() - start_time
-    logging.debug("Execution time " + str(exec_time))
+    logging.info("Execution time " + str(exec_time))
     logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Finished")
 
 
