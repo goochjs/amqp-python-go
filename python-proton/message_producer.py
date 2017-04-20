@@ -154,13 +154,12 @@ class Send(MessagingHandler):
     def on_accepted(self, event):
         self.confirmed += 1
         if self.confirmed == self.total:
-            logging.info(str(self.confirmed) + " messages sent")
             event.connection.close()
 
 
     def on_disconnected(self, event):
         self.sent = self.confirmed
-        logging.info("Disconnected from " + clean_url(self.url))
+        logging.debug("Disconnected from " + clean_url(self.url))
 
 
 # --- START OF MAIN ----------------------------------------------------------
@@ -175,15 +174,16 @@ def main():
         )
     logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Started")
 
-    try:
-        Container(
-                Send(broker, resource, max_messages, persistent, subject, user_id)
-            ).run()
-    except KeyboardInterrupt:
-        logging.info("Keyboard interrupt received")
+    if max_messages > 0:
+        try:
+            Container(
+                    Send(broker, resource, max_messages, persistent, subject, user_id)
+                    ).run()
+        except KeyboardInterrupt:
+            logging.info("Keyboard interrupt received")
 
     exec_time = datetime.datetime.now() - start_time
-    logging.info("Execution time " + str(exec_time))
+    logging.info(str(max_messages) + " messages sent in " + str(exec_time))
     logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Finished")
 
 

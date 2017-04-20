@@ -138,7 +138,8 @@ class Recv(MessagingHandler):
             logging.error("Duplicate message received " + str(event.message.body))
             return
 
-        print(event.message)
+        # print the message out
+        logging.debug(event.message)
 
         self.count += 1
         if event.message.id:
@@ -153,7 +154,7 @@ class Recv(MessagingHandler):
             event.connection.close()
 
             message_processing_time = datetime.datetime.now() - first_message_time
-            logging.debug(str(self.count) + " messages received in " + str(message_processing_time))
+            logging.info(str(self.count) + " messages received in " + str(message_processing_time))
             logging.debug("Disconnected from " + clean_url(self.url))
 
 
