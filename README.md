@@ -83,6 +83,14 @@ Similarly for the `message_producer`...
 
 ..etc etc
 
+### File sender
+
+Another script offers the ability to send a file into ActiveMQ, one line at a time.  Example calling syntax to send the content of the script file itself into ActiveMQ...
+
+    docker build -t python-file_sender -f ./Dockerfile-sender .
+
+    docker run -it --rm --name python-file-sender_1 --network container:activemq_1 python-file-sender -b user:password@localhost:5672 -t some_topic -f /usr/src/python-proton/file_sender.py -a header1=something -a header2=somethingelse
+
 ### go-electron
 
 The Go clients are run from within a bash shell.  From within the `go-electron` folder...
