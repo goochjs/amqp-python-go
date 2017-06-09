@@ -1,21 +1,13 @@
 # RabbitMQ
 
-## Dockerised RabbitMQ
+## Docker
 
-    docker run -d --hostname my-rabbit --name rabbitmq_1 -p 8080:15672 -p 5672:5672 rabbitmq:3-management
+From the project root folder...
 
-    docker build -t rabbitmq-amqp -f ./Dockerfile-RabbitMQ .
+    docker-compose up --build rabbitmq
 
-    docker run -d --hostname my-rabbit --name rabbitmq_1 -p 8080:15672 -p 5672:5672 rabbitmq-amqp
+This will create and run a container called `rabbitmq_1`.
 
 ## Management portal
 
     http://localhost:8080
-
-## Bash shell with network access to Rabbit
-
-    docker run -it --network container:rabbitmq_1 bash
-
-    docker build -t python-rabbitmq-producer -f ./Dockerfile-producer .
-
-    docker run -it --rm --name python-rabbitmq-producer_1 --network container:rabbitmq_1 python-rabbitmq-producer -b user:password@localhost:5672 -t some_topic -m 10 -vp
