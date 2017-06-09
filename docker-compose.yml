@@ -14,8 +14,15 @@ services:
         volumes:
             - activemq-vol:/mnt/nfs-share/activemq
 
+    rabbitmq:
+        build:
+            context: ./rabbitmq
+            dockerfile: Dockerfile-rabbitmq
+        container_name: rabbitmq_1
+        ports:
+            - "5672:5672"
+            - "8080:15672"
+
 volumes:
     activemq-vol:
-        driver: local
-    nfs-vol:
         driver: local

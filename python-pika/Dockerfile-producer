@@ -1,0 +1,7 @@
+FROM python:3
+
+RUN pip3 install pika
+
+COPY . /usr/src/python-rabbitmq
+
+ENTRYPOINT [ "python", "/usr/src/python-rabbitmq/message_producer.py" ]
