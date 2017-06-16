@@ -2,6 +2,6 @@
 
 ## Docker
 
-    docker build -t python-rabbitmq-producer -f ./Dockerfile-producer .
+    docker build -t pika-producer -f ./Dockerfile-producer .
 
-    docker run -it --rm --name python-rabbitmq-producer_1 --network container:rabbitmq_1 python-rabbitmq-producer
+    docker run -it --rm --name pika-producer_1 --network container:rabbitmq_1 pika-producer

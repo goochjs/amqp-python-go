@@ -4,4 +4,4 @@ RUN pip3 install python-qpid-proton
 
 COPY . /usr/src/python-proton
 
-ENTRYPOINT [ "python", "/usr/src/python-proton/message_producer.py" ]
+ENTRYPOINT [ "python", "/usr/src/python-proton/proton_producer.py" ]

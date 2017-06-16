@@ -4,4 +4,4 @@ RUN pip3 install python-qpid-proton
 
 COPY . /usr/src/python-proton
 
-ENTRYPOINT [ "python", "/usr/src/python-proton/message_receiver.py" ]
+ENTRYPOINT [ "python", "/usr/src/python-proton/proton_receiver.py" ]

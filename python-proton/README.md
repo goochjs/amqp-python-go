@@ -28,31 +28,31 @@ Listen indefinitely to a queue (via localhost:5672)
 
 Also provided are Dockerfiles for a standalone ActiveMQ service and the client scripts.  The latter include the installation of the necessary [qpid-proton](https://qpid.apache.org/proton/index.html) and [qpid-electron](https://godoc.org/qpid.apache.org/electron) lbraries.
 
-### python-message-receiver
+### proton-receiver
 
 From the Python script folder...
 
-    docker build -t python-message-receiver -f ./Dockerfile-receiver .
+    docker build -t proton-receiver -f ./Dockerfile-receiver .
 
 If connecting to ActiveMQ running natively on your localhost...
 
-    docker run -it --rm --name python-message-receiver_1 python-message-receiver -q some_queue -m 100 -v
+    docker run -it --rm --name proton-receiver_1 proton-receiver -q some_queue -m 100 -v
 
 If connecting to ActiveMQ running in a Docker container called `activemq_1` (requiring an ID and password)...
 
-    docker run -it --rm --name python-message-receiver_1 --network container:activemq_1 python-message-receiver -b user:password@localhost:5672 -t some_topic -m 0 -v -n python-client
+    docker run -it --rm --name proton-receiver_1 --network container:activemq_1 proton-receiver -b user:password@localhost:5672 -t some_topic -m 0 -v -n python-client
 
 If connecting to ActiveMQ running somewhere else...
 
-    docker run -it --rm --name python-message-receiver_1 python-message-receiver -b 127.0.1.2:5672 -t some_topic -m 100 -v
+    docker run -it --rm --name proton-receiver_1 proton-receiver -b 127.0.1.2:5672 -t some_topic -m 100 -v
 
-### python-message-producer
+### proton-producer
 
 Similarly for the `message_producer`...
 
-    docker build -t python-message-producer -f ./Dockerfile-producer .
+    docker build -t proton-producer -f ./Dockerfile-producer .
 
-    docker run -it --rm --name python-message-producer_1 --network container:activemq_1 python-message-producer -b user:password@localhost:5672 -t some_topic -m 10 -vp
+    docker run -it --rm --name proton-producer_1 --network container:activemq_1 proton-producer -b user:password@localhost:5672 -t some_topic -m 10 -vp
 
 ..etc etc
 
@@ -60,6 +60,6 @@ Similarly for the `message_producer`...
 
 Another script offers the ability to send a file into ActiveMQ, one line at a time.  Example calling syntax to send the content of the script file itself into ActiveMQ...
 
-    docker build -t python-file_sender -f ./Dockerfile-sender .
+    docker build -t proton-file-sender -f ./Dockerfile-sender .
 
-    docker run -it --rm --name python-file-sender_1 --network container:activemq_1 python-file-sender -b user:password@localhost:5672 -t some_topic -f /usr/src/python-proton/file_sender.py -a header1=something -a header2=somethingelse
+    docker run -it --rm --name proton-file-sender_1 --network container:activemq_1 proton-file-sender -b user:password@localhost:5672 -t some_topic -f /usr/src/python-proton/file_sender.py -a header1=something -a header2=somethingelse
