@@ -179,11 +179,13 @@ def main():
             Container(
                     Send(broker, resource, max_messages, persistent, subject, user_id)
                     ).run()
+            exec_time = datetime.datetime.now() - start_time
+            logging.info(str(max_messages) + " messages sent in " + str(exec_time))
         except KeyboardInterrupt:
             logging.info("Keyboard interrupt received")
+        except Exception as e:
+            raise e
 
-    exec_time = datetime.datetime.now() - start_time
-    logging.info(str(max_messages) + " messages sent in " + str(exec_time))
     logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Finished")
 
 

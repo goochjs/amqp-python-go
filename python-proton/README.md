@@ -62,4 +62,4 @@ Another script offers the ability to send a file into ActiveMQ, one line at a ti
 
     docker build -t proton-file-sender -f ./Dockerfile-sender .
 
-    docker run -it --rm --name proton-file-sender_1 --network container:activemq_1 proton-file-sender -b user:password@localhost:5672 -t some_topic -f /usr/src/python-proton/file_sender.py -a header1=something -a header2=somethingelse
+    docker run -it --rm --name proton-file-sender_1 --network container:activemq_1 proton-file-sender -b user:password@localhost:5672 -t some_topic -f /usr/src/python-proton/proton_file_sender.py -a header1=something -a header2=somethingelse

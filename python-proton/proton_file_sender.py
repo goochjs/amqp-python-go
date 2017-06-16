@@ -205,6 +205,8 @@ def main():
                 ).run()
     except KeyboardInterrupt:
         logging.info("Keyboard interrupt received")
+    except Exception as e:
+        raise e
 
     exec_time = datetime.datetime.now() - start_time
     logging.info(str(send_count) + " messages sent in " + str(exec_time))

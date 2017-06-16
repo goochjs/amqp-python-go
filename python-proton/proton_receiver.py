@@ -174,6 +174,8 @@ def main():
         Container(Recv(broker, resource, max_messages, subscription_name)).run()
     except KeyboardInterrupt:
         logging.info("Keyboard interrupt received")
+    except Exception as e:
+        raise e
 
     exec_time = datetime.datetime.now() - start_time
     logging.debug("Execution time " + str(exec_time))
