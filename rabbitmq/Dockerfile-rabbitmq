@@ -1,3 +1,11 @@
 FROM rabbitmq:3-management
 
+# Create the directories for the persistence and log stores
+USER root
+RUN mkdir -p /data/mnesia && \
+    chown rabbitmq:rabbitmq /data/mnesia
+RUN mkdir -p /data/log && \
+    chown rabbitmq:rabbitmq /data/log
+USER rabbitmq
+
 RUN rabbitmq-plugins enable rabbitmq_amqp1_0

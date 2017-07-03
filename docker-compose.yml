@@ -19,10 +19,22 @@ services:
             context: ./rabbitmq
             dockerfile: Dockerfile-rabbitmq
         container_name: rabbitmq_1
+        environment:
+            - RABBITMQ_DEFAULT_USER=user
+            - RABBITMQ_DEFAULT_PASS=user
+            - RABBITMQ_MNESIA_BASE=/data/mnesia
+            - RABBITMQ_LOG_BASE=/data/log
         ports:
             - "5672:5672"
             - "8080:15672"
+        volumes:
+            - rabbitmq-data-vol:/data/mnesia
+            - rabbitmq-log-vol:/data/log
 
 volumes:
     activemq-vol:
+        driver: local
+    rabbitmq-data-vol:
+        driver: local
+    rabbitmq-log-vol:
         driver: local

@@ -61,12 +61,6 @@ def process_options():
         default=False,
         action="store_true",
         help="send persistent messages")
-    opts.add_argument("--subject", "-s",
-        required=False,
-        help="message subject (adds header if included)")
-    opts.add_argument("--user_id", "-u",
-        required=False,
-        help="client user id")
     opts.add_argument("--verbose", "-v",
         required=False,
         default=False,
@@ -104,8 +98,6 @@ def process_options():
         resource_type,
         options.max_messages,
         options.persistent,
-        options.subject,
-        options.user_id,
         log_level)
 
 
@@ -133,16 +125,26 @@ class Publisher(object):
 
     """
     EXCHANGE = 'message'
-    PUBLISH_INTERVAL = 1
+    PUBLISH_INTERVAL = 0
     ROUTING_KEY = 'example.text'
 
-    def __init__(self, amqp_url, resource_type, resource):
+
+    def __init__(
+        self,
+        amqp_url,
+        resource_type,
+        resource,
+        max_messages,
+        persistent
+    ):
         """Setup the example publisher object, passing in the URL we will use
         to connect to the broker.
 
         :param str amqp_url: The URL for connecting to RabbitMQ
         :param str resource_type: "queue" or "topic"
         :param str resource: The name of the queue or topic
+        :param int max_messages: How many messages to send
+        :param boo persistent: Whether to set messages to be persistent or not
 
         """
         self._connection = None
@@ -155,7 +157,10 @@ class Publisher(object):
         self._url = amqp_url
         self._exchange_type = resource_type
         self._queue = resource
+        self._max_messages = max_messages
+        self._persistent = persistent
         self._closing = False
+
 
     def connect(self):
         """This method connects to RabbitMQ, returning the connection handle.
@@ -172,6 +177,7 @@ class Publisher(object):
                                      self.on_connection_open,
                                      stop_ioloop_on_close=False)
 
+
     def on_connection_open(self, unused_connection):
         """This method is called by pika once the connection to RabbitMQ has
         been established. It passes the handle to the connection object in
@@ -184,6 +190,7 @@ class Publisher(object):
         self.add_on_connection_close_callback()
         self.open_channel()
 
+
     def add_on_connection_close_callback(self):
         """This method adds an on close callback that will be invoked by pika
         when RabbitMQ closes the connection to the publisher unexpectedly.
@@ -191,6 +198,7 @@ class Publisher(object):
         """
         logging.info('Adding connection close callback')
         self._connection.add_on_close_callback(self.on_connection_closed)
+
 
     def on_connection_closed(self, connection, reply_code, reply_text):
         """This method is invoked by pika when the connection to RabbitMQ is
@@ -209,6 +217,7 @@ class Publisher(object):
             logging.warning('Connection closed, reopening in 5 seconds: (%s) %s',
                            reply_code, reply_text)
             self._connection.add_timeout(5, self.reconnect)
+
 
     def reconnect(self):
         """Will be invoked by the IOLoop timer if the connection is
@@ -229,6 +238,7 @@ class Publisher(object):
         # There is now a new connection, needs a new ioloop to run
         self._connection.ioloop.start()
 
+
     def open_channel(self):
         """This method will open a new channel with RabbitMQ by issuing the
         Channel.Open RPC command. When RabbitMQ confirms the channel is open
@@ -238,6 +248,7 @@ class Publisher(object):
         """
         logging.info('Creating a new channel')
         self._connection.channel(on_open_callback=self.on_channel_open)
+
 
     def on_channel_open(self, channel):
         """This method is invoked by pika when the channel has been opened.
@@ -253,6 +264,7 @@ class Publisher(object):
         self.add_on_channel_close_callback()
         self.setup_exchange(self.EXCHANGE)
 
+
     def add_on_channel_close_callback(self):
         """This method tells pika to call the on_channel_closed method if
         RabbitMQ unexpectedly closes the channel.
@@ -260,6 +272,7 @@ class Publisher(object):
         """
         logging.info('Adding channel close callback')
         self._channel.add_on_close_callback(self.on_channel_closed)
+
 
     def on_channel_closed(self, channel, reply_code, reply_text):
         """Invoked by pika when RabbitMQ unexpectedly closes the channel.
@@ -277,6 +290,7 @@ class Publisher(object):
         if not self._closing:
             self._connection.close()
 
+
     def setup_exchange(self, exchange_name):
         """Setup the exchange on RabbitMQ by invoking the Exchange.Declare RPC
         command. When it is complete, the on_exchange_declareok method will
@@ -288,7 +302,10 @@ class Publisher(object):
         logging.info('Declaring exchange %s', exchange_name)
         self._channel.exchange_declare(self.on_exchange_declareok,
                                        exchange_name,
-                                       self._exchange_type)
+                                       self._exchange_type,
+                                       False,
+                                       True)
+
 
     def on_exchange_declareok(self, unused_frame):
         """Invoked by pika when RabbitMQ has finished the Exchange.Declare RPC
@@ -300,6 +317,7 @@ class Publisher(object):
         logging.info('Exchange declared')
         self.setup_queue(self._queue)
 
+
     def setup_queue(self, queue_name):
         """Setup the queue on RabbitMQ by invoking the Queue.Declare RPC
         command. When it is complete, the on_queue_declareok method will
@@ -309,7 +327,11 @@ class Publisher(object):
 
         """
         logging.info('Declaring queue %s', queue_name)
-        self._channel.queue_declare(self.on_queue_declareok, queue_name)
+        self._channel.queue_declare(self.on_queue_declareok,
+                                    queue_name,
+                                    False,
+                                    True)
+
 
     def on_queue_declareok(self, method_frame):
         """Method invoked by pika when the Queue.Declare RPC call made in
@@ -326,12 +348,14 @@ class Publisher(object):
         self._channel.queue_bind(self.on_bindok, self._queue,
                                  self.EXCHANGE, self.ROUTING_KEY)
 
+
     def on_bindok(self, unused_frame):
         """This method is invoked by pika when it receives the Queue.BindOk
         response from RabbitMQ. Since we know we're now setup and bound, it's
         time to start publishing."""
         logging.info('Queue bound')
         self.start_publishing()
+
 
     def start_publishing(self):
         """This method will enable delivery confirmations and schedule the
@@ -341,6 +365,7 @@ class Publisher(object):
         logging.info('Issuing consumer related RPC commands')
         self.enable_delivery_confirmations()
         self.schedule_next_message()
+
 
     def enable_delivery_confirmations(self):
         """Send the Confirm.Select RPC method to RabbitMQ to enable delivery
@@ -355,6 +380,7 @@ class Publisher(object):
         """
         logging.info('Issuing Confirm.Select RPC command')
         self._channel.confirm_delivery(self.on_delivery_confirmation)
+
 
     def on_delivery_confirmation(self, method_frame):
         """Invoked by pika when RabbitMQ responds to a Basic.Publish RPC
@@ -383,6 +409,7 @@ class Publisher(object):
                     self._message_number, len(self._deliveries),
                     self._acked, self._nacked)
 
+
     def schedule_next_message(self):
         """If we are not closing our connection to RabbitMQ, schedule another
         message to be delivered in PUBLISH_INTERVAL seconds.
@@ -390,10 +417,12 @@ class Publisher(object):
         """
         if self._stopping:
             return
+
         logging.info('Scheduling next message for %0.1f seconds',
                     self.PUBLISH_INTERVAL)
         self._connection.add_timeout(self.PUBLISH_INTERVAL,
                                      self.publish_message)
+
 
     def publish_message(self):
         """If the class is not stopping, publish a message to RabbitMQ,
@@ -412,9 +441,18 @@ class Publisher(object):
             return
 
         message = {'sequence':(self._message_number+1)}
-        properties = pika.BasicProperties(app_id=os.path.basename(__file__),
-                                          content_type='application/json',
-                                          headers=message)
+
+        if self._persistent:
+            properties = pika.BasicProperties(
+                app_id=os.path.basename(__file__),
+                content_type='application/json',
+                delivery_mode = 2, # make message persistent
+                headers=message)
+        else:
+            properties = pika.BasicProperties(
+                app_id=os.path.basename(__file__),
+                content_type='application/json',
+                headers=message)
 
         self._channel.basic_publish(self.EXCHANGE, self.ROUTING_KEY,
                                     json.dumps(message, ensure_ascii=False),
@@ -422,7 +460,12 @@ class Publisher(object):
         self._message_number += 1
         self._deliveries.append(self._message_number)
         logging.info('Published message # %i', self._message_number)
-        self.schedule_next_message()
+
+        if self._message_number < self._max_messages:
+            self.schedule_next_message()
+        else:
+            self.stop()
+
 
     def close_channel(self):
         """Invoke this command to close the channel with RabbitMQ by sending
@@ -433,12 +476,14 @@ class Publisher(object):
         if self._channel:
             self._channel.close()
 
+
     def run(self):
         """Run the example code by connecting and then starting the IOLoop.
 
         """
         self._connection = self.connect()
         self._connection.ioloop.start()
+
 
     def stop(self):
         """Stop the example by closing the channel and connection. We
@@ -456,6 +501,7 @@ class Publisher(object):
         self._connection.ioloop.start()
         logging.info('Stopped')
 
+
     def close_connection(self):
         """This method closes the connection to RabbitMQ."""
         logging.info('Closing connection')
@@ -467,7 +513,7 @@ class Publisher(object):
 
 def main():
     start_time = datetime.datetime.now()
-    (broker, resource, resource_type, max_messages, persistent, subject, user_id, log_level) = process_options()
+    (broker, resource, resource_type, max_messages, persistent, log_level) = process_options()
 
     logging.basicConfig(
             level=log_level,
@@ -475,11 +521,12 @@ def main():
         )
     logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Started")
 
-    # Connect to localhost:5672 as guest with the password guest and virtual host "/" (%2F)
     conn = Publisher(
         PROTOCOL + broker + CONNECTION_OPTIONS,
         resource_type,
-        resource
+        resource,
+        max_messages,
+        persistent
     )
 
     if max_messages > 0:
