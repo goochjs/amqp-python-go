@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 '''
-Created on 11th Jan 2017
+Created on 9th June 2017
 
 @author: Jeremy Gooch
 
@@ -81,11 +81,11 @@ def process_options():
 
     # add the correct internal protocol
     if options.topic:
-        resource = options.topic
-        resource_type = "topic"
+        routing_key = options.topic
+        exchange_type = "topic"
     else:
-        resource = options.queue
-        resource_type = "direct"
+        routing_key = options.queue
+        exchange_type = "direct"
 
     if options.verbose:
         log_level = logging.DEBUG
@@ -94,8 +94,8 @@ def process_options():
 
     return(
         options.broker,
-        resource,
-        resource_type,
+        routing_key,
+        exchange_type,
         options.max_messages,
         options.persistent,
         log_level)
@@ -124,16 +124,14 @@ class Publisher(object):
     messages that have been sent and if they've been confirmed by the broker.
 
     """
-    EXCHANGE = 'message'
     PUBLISH_INTERVAL = 0
-    ROUTING_KEY = 'example.text'
 
 
     def __init__(
         self,
         amqp_url,
-        resource_type,
-        resource,
+        exchange_type,
+        routing_key,
         max_messages,
         persistent
     ):
@@ -141,8 +139,8 @@ class Publisher(object):
         to connect to the broker.
 
         :param str amqp_url: The URL for connecting to RabbitMQ
-        :param str resource_type: "queue" or "topic"
-        :param str resource: The name of the queue or topic
+        :param str exchange_type: "queue" or "topic"
+        :param str routing_key: The name of the routing key
         :param int max_messages: How many messages to send
         :param boo persistent: Whether to set messages to be persistent or not
 
@@ -155,8 +153,10 @@ class Publisher(object):
         self._message_number = 0
         self._stopping = False
         self._url = amqp_url
-        self._exchange_type = resource_type
-        self._queue = resource
+        self._exchange_type = exchange_type
+        self._exchange = routing_key
+        self._routing_key = routing_key
+        self._queue = routing_key
         self._max_messages = max_messages
         self._persistent = persistent
         self._closing = False
@@ -172,7 +172,7 @@ class Publisher(object):
         :rtype: pika.SelectConnection
 
         """
-        logging.info('Connecting to %s', self._url)
+        logging.debug('Connecting to %s', clean_url(self._url))
         return pika.SelectConnection(pika.URLParameters(self._url),
                                      self.on_connection_open,
                                      stop_ioloop_on_close=False)
@@ -186,7 +186,7 @@ class Publisher(object):
         :type unused_connection: pika.SelectConnection
 
         """
-        logging.info('Connection opened')
+        logging.debug('Connection opened')
         self.add_on_connection_close_callback()
         self.open_channel()
 
@@ -196,7 +196,7 @@ class Publisher(object):
         when RabbitMQ closes the connection to the publisher unexpectedly.
 
         """
-        logging.info('Adding connection close callback')
+        logging.debug('Adding connection close callback')
         self._connection.add_on_close_callback(self.on_connection_closed)
 
 
@@ -246,7 +246,7 @@ class Publisher(object):
         will be invoked.
 
         """
-        logging.info('Creating a new channel')
+        logging.debug('Creating a new channel')
         self._connection.channel(on_open_callback=self.on_channel_open)
 
 
@@ -259,10 +259,10 @@ class Publisher(object):
         :param pika.channel.Channel channel: The channel object
 
         """
-        logging.info('Channel opened')
+        logging.debug('Channel opened')
         self._channel = channel
         self.add_on_channel_close_callback()
-        self.setup_exchange(self.EXCHANGE)
+        self.setup_exchange(self._exchange)
 
 
     def add_on_channel_close_callback(self):
@@ -270,7 +270,7 @@ class Publisher(object):
         RabbitMQ unexpectedly closes the channel.
 
         """
-        logging.info('Adding channel close callback')
+        logging.debug('Adding channel close callback')
         self._channel.add_on_close_callback(self.on_channel_closed)
 
 
@@ -299,7 +299,7 @@ class Publisher(object):
         :param str|unicode exchange_name: The name of the exchange to declare
 
         """
-        logging.info('Declaring exchange %s', exchange_name)
+        logging.debug('Declaring exchange %s', exchange_name)
         self._channel.exchange_declare(self.on_exchange_declareok,
                                        exchange_name,
                                        self._exchange_type,
@@ -314,8 +314,14 @@ class Publisher(object):
         :param pika.Frame.Method unused_frame: Exchange.DeclareOk response frame
 
         """
-        logging.info('Exchange declared')
-        self.setup_queue(self._queue)
+        logging.debug('Exchange declared')
+
+        # if it's a direct exchange, then create the queue
+        # otherwise, it must be a pub/sub pattern so start publishing
+        if self._exchange_type == "direct":
+            self.setup_queue(self._queue)
+        else:
+            self.start_publishing()
 
 
     def setup_queue(self, queue_name):
@@ -326,7 +332,7 @@ class Publisher(object):
         :param str|unicode queue_name: The name of the queue to declare.
 
         """
-        logging.info('Declaring queue %s', queue_name)
+        logging.debug('Declaring queue %s', queue_name)
         self._channel.queue_declare(self.on_queue_declareok,
                                     queue_name,
                                     False,
@@ -343,17 +349,17 @@ class Publisher(object):
         :param pika.frame.Method method_frame: The Queue.DeclareOk frame
 
         """
-        logging.info('Binding %s to %s with %s',
-                    self.EXCHANGE, self._queue, self.ROUTING_KEY)
+        logging.debug('Binding %s to %s with %s',
+                    self._exchange, self._queue, self._routing_key)
         self._channel.queue_bind(self.on_bindok, self._queue,
-                                 self.EXCHANGE, self.ROUTING_KEY)
+                                 self._exchange, self._routing_key)
 
 
     def on_bindok(self, unused_frame):
         """This method is invoked by pika when it receives the Queue.BindOk
         response from RabbitMQ. Since we know we're now setup and bound, it's
         time to start publishing."""
-        logging.info('Queue bound')
+        logging.debug('Queue bound')
         self.start_publishing()
 
 
@@ -362,7 +368,7 @@ class Publisher(object):
         first message to be sent to RabbitMQ
 
         """
-        logging.info('Issuing consumer related RPC commands')
+        logging.debug('Issuing consumer related RPC commands')
         self.enable_delivery_confirmations()
         self.schedule_next_message()
 
@@ -378,7 +384,7 @@ class Publisher(object):
         is confirming or rejecting.
 
         """
-        logging.info('Issuing Confirm.Select RPC command')
+        logging.debug('Issuing Confirm.Select RPC command')
         self._channel.confirm_delivery(self.on_delivery_confirmation)
 
 
@@ -396,7 +402,7 @@ class Publisher(object):
 
         """
         confirmation_type = method_frame.method.NAME.split('.')[1].lower()
-        logging.info('Received %s for delivery tag: %i',
+        logging.debug('Received %s for delivery tag: %i',
                     confirmation_type,
                     method_frame.method.delivery_tag)
         if confirmation_type == 'ack':
@@ -418,7 +424,7 @@ class Publisher(object):
         if self._stopping:
             return
 
-        logging.info('Scheduling next message for %0.1f seconds',
+        logging.debug('Scheduling next message for %0.1f seconds',
                     self.PUBLISH_INTERVAL)
         self._connection.add_timeout(self.PUBLISH_INTERVAL,
                                      self.publish_message)
@@ -454,12 +460,12 @@ class Publisher(object):
                 content_type='application/json',
                 headers=message)
 
-        self._channel.basic_publish(self.EXCHANGE, self.ROUTING_KEY,
+        self._channel.basic_publish(self._exchange, self._routing_key,
                                     json.dumps(message, ensure_ascii=False),
                                     properties)
         self._message_number += 1
         self._deliveries.append(self._message_number)
-        logging.info('Published message # %i', self._message_number)
+        logging.debug('Published message # %i', self._message_number)
 
         if self._message_number < self._max_messages:
             self.schedule_next_message()
@@ -472,7 +478,7 @@ class Publisher(object):
         the Channel.Close RPC command.
 
         """
-        logging.info('Closing the channel')
+        logging.debug('Closing the channel')
         if self._channel:
             self._channel.close()
 
@@ -499,12 +505,12 @@ class Publisher(object):
         self.close_channel()
         self.close_connection()
         self._connection.ioloop.start()
-        logging.info('Stopped')
+        logging.debug('Stopped')
 
 
     def close_connection(self):
         """This method closes the connection to RabbitMQ."""
-        logging.info('Closing connection')
+        logging.debug('Closing connection')
         self._closing = True
         self._connection.close()
 
@@ -513,7 +519,7 @@ class Publisher(object):
 
 def main():
     start_time = datetime.datetime.now()
-    (broker, resource, resource_type, max_messages, persistent, log_level) = process_options()
+    (broker, routing_key, exchange_type, max_messages, persistent, log_level) = process_options()
 
     logging.basicConfig(
             level=log_level,
@@ -523,8 +529,8 @@ def main():
 
     conn = Publisher(
         PROTOCOL + broker + CONNECTION_OPTIONS,
-        resource_type,
-        resource,
+        exchange_type,
+        routing_key,
         max_messages,
         persistent
     )
@@ -536,6 +542,7 @@ def main():
             logging.info(str(max_messages) + " messages sent in " + str(exec_time))
         except KeyboardInterrupt:
             logging.info("Keyboard interrupt received")
+            conn.stop()
         except Exception as e:
             raise e
 
