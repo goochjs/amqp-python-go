@@ -110,7 +110,7 @@ class Recv(MessagingHandler):
 
     def on_start(self, event):
         if self.subscription_name:
-            logging.debug("Naming durable subscription " + self.subscription_name)
+            logging.debug("Naming durable subscription %s", self.subscription_name)
             durable = DurableSubscription()
         else:
             logging.debug("Subscription will not be durable")
@@ -125,7 +125,7 @@ class Recv(MessagingHandler):
             name=self.subscription_name,
             options=durable
         )
-        logging.debug("Connected to " + clean_url(self.url) + " " + self.resource)
+        logging.debug("Connected to %s %s", clean_url(self.url), self.resource)
 
 
     def on_message(self, event):
@@ -135,7 +135,7 @@ class Recv(MessagingHandler):
             first_message_time = datetime.datetime.now()
 
         if event.message.id and event.message.id in self.received:
-            logging.error("Duplicate message received " + str(event.message.body))
+            logging.error("Duplicate message received %s", event.message.body)
             return
 
         # print the message out
@@ -154,8 +154,8 @@ class Recv(MessagingHandler):
             event.connection.close()
 
             message_processing_time = datetime.datetime.now() - first_message_time
-            logging.info(str(self.count) + " messages received in " + str(message_processing_time))
-            logging.debug("Disconnected from " + clean_url(self.url))
+            logging.info("%s messages received in %s", self.count, message_processing_time)
+            logging.debug("Disconnected from %s", clean_url(self.url))
 
 
 # --- START OF MAIN ----------------------------------------------------------
@@ -168,7 +168,7 @@ def main():
             level=log_level,
             format='[%(levelname)s] (%(threadName)-10s) %(message)s',
         )
-    logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Started")
+    logging.debug("%s Started", datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p"))
 
     try:
         Container(Recv(broker, resource, max_messages, subscription_name)).run()
@@ -178,8 +178,8 @@ def main():
         raise e
 
     exec_time = datetime.datetime.now() - start_time
-    logging.debug("Execution time " + str(exec_time))
-    logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Finished")
+    logging.debug("Execution time %s", exec_time)
+    logging.debug("%s Finished", datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p"))
 
 
 

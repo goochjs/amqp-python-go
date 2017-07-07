@@ -129,8 +129,8 @@ class Send(MessagingHandler):
 
 
     def on_sendable(self, event):
-        logging.debug(str(self.confirmed) + " messages sent")
-        logging.debug("Connected to " + clean_url(self.url) + " " + self.resource)
+        logging.debug("%s messages sent", self.confirmed)
+        logging.debug("Connected to %s %s", clean_url(self.url), self.resource)
 
         # encode the user_id if present
         if self.user_id:
@@ -159,7 +159,7 @@ class Send(MessagingHandler):
 
     def on_disconnected(self, event):
         self.sent = self.confirmed
-        logging.debug("Disconnected from " + clean_url(self.url))
+        logging.debug("Disconnected from %s", clean_url(self.url))
 
 
 # --- START OF MAIN ----------------------------------------------------------
@@ -172,7 +172,7 @@ def main():
             level=log_level,
             format='[%(levelname)s] (%(threadName)-10s) %(message)s',
         )
-    logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Started")
+    logging.debug("%s Started", datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p"))
 
     if max_messages > 0:
         try:
@@ -180,13 +180,13 @@ def main():
                     Send(broker, resource, max_messages, persistent, subject, user_id)
                     ).run()
             exec_time = datetime.datetime.now() - start_time
-            logging.info(str(max_messages) + " messages sent in " + str(exec_time))
+            logging.info("%s messages sent in %s", max_messages, exec_time)
         except KeyboardInterrupt:
             logging.info("Keyboard interrupt received")
         except Exception as e:
             raise e
 
-    logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Finished")
+    logging.debug("%s Finished", datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p"))
 
 
 
