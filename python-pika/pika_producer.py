@@ -139,7 +139,7 @@ class Publisher(object):
         to connect to the broker.
 
         :param str amqp_url: The URL for connecting to RabbitMQ
-        :param str exchange_type: "queue" or "topic"
+        :param str exchange_type: "direct" or "topic"
         :param str routing_key: The name of the routing key
         :param int max_messages: How many messages to send
         :param boo persistent: Whether to set messages to be persistent or not
@@ -410,7 +410,7 @@ class Publisher(object):
         elif confirmation_type == 'nack':
             self._nacked += 1
         self._deliveries.remove(method_frame.method.delivery_tag)
-        logging.info('Published %i messages, %i have yet to be confirmed, '
+        logging.debug('Published %i messages, %i have yet to be confirmed, '
                     '%i were acked and %i were nacked',
                     self._message_number, len(self._deliveries),
                     self._acked, self._nacked)
@@ -452,13 +452,15 @@ class Publisher(object):
             properties = pika.BasicProperties(
                 app_id=os.path.basename(__file__),
                 content_type='application/json',
-                delivery_mode = 2, # make message persistent
-                headers=message)
+                delivery_mode=2, # make message persistent
+                message_id=(str(uuid.uuid4())),
+                timestamp=int(time.time()))
         else:
             properties = pika.BasicProperties(
                 app_id=os.path.basename(__file__),
                 content_type='application/json',
-                headers=message)
+                message_id=(str(uuid.uuid4())),
+                timestamp=int(time.time()))
 
         self._channel.basic_publish(self._exchange, self._routing_key,
                                     json.dumps(message, ensure_ascii=False),
