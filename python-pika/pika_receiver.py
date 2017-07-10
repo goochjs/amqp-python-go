@@ -34,17 +34,20 @@ def process_options():
         required=False,
         default="localhost:5672",
         help="broker connection string")
-    opts.add_argument("--topic", "-t",
+    opts.add_argument("--exchange", "-e",
         required=False,
-        help="topic name")
-    opts.add_argument("--queue", "-q",
-        required=False,
-        help="queue name")
+        help="exchange name (is set to queue/topic name if omitted)")
     opts.add_argument("--max_messages", "-m",
         type=int,
         default=100,
         required=True,
         help="number of messages to receive before stopping. Setting '0' retrieves indefinitely")
+    opts.add_argument("--queue", "-q",
+        required=False,
+        help="queue name")
+    opts.add_argument("--topic", "-t",
+        required=False,
+        help="topic name")
     opts.add_argument("--verbose", "-v",
         required=False,
         default=False,
@@ -71,6 +74,12 @@ def process_options():
         binding_key = options.queue
         exchange_type = "direct"
 
+    # if no explicit exchange parameter was specified, set it to the same as the binding key
+    if options.exchange:
+        exchange = options.exchange
+    else:
+        exchange = binding_key
+
     if options.verbose:
         log_level = logging.DEBUG
     else:
@@ -78,6 +87,7 @@ def process_options():
 
     return(
         options.broker,
+        exchange,
         exchange_type,
         binding_key,
         options.max_messages,
@@ -108,7 +118,7 @@ class Consumer(object):
 
     """
 
-    def __init__(self, amqp_url, exchange_type, binding_key, max_messages):
+    def __init__(self, amqp_url, exchange, exchange_type, binding_key, max_messages):
         """Create a new instance of the consumer class, passing in the AMQP
         URL used to connect to RabbitMQ.
 
@@ -123,7 +133,7 @@ class Consumer(object):
         self._consumer_tag = None
         self._url = amqp_url
         self._binding_key = binding_key
-        self._exchange = binding_key
+        self._exchange = exchange
         self._queue = binding_key
         self._max_messages = max_messages
         self._count = 0
@@ -437,7 +447,7 @@ class Consumer(object):
 
 def main():
     start_time = datetime.datetime.now()
-    (broker, exchange_type, binding_key, max_messages, log_level) = process_options()
+    (broker, exchange, exchange_type, binding_key, max_messages, log_level) = process_options()
 
     logging.basicConfig(
             level=log_level,
@@ -447,6 +457,7 @@ def main():
 
     conn = Consumer(
             'amqp://user:user@localhost:5672/%2F',
+            exchange,
             exchange_type,
             binding_key,
             max_messages
