@@ -45,12 +45,9 @@ def process_options():
         required=False,
         default="localhost:5672",
         help="broker connection string")
-    opts.add_argument("--topic", "-t",
+    opts.add_argument("--exchange", "-e",
         required=False,
-        help="topic name")
-    opts.add_argument("--queue", "-q",
-        required=False,
-        help="queue name")
+        help="exchange name (is set to queue/topic name if omitted)")
     opts.add_argument("--max_messages", "-m",
         type=int,
         default=100,
@@ -61,6 +58,12 @@ def process_options():
         default=False,
         action="store_true",
         help="send persistent messages")
+    opts.add_argument("--queue", "-q",
+        required=False,
+        help="queue name")
+    opts.add_argument("--topic", "-t",
+        required=False,
+        help="topic name")
     opts.add_argument("--verbose", "-v",
         required=False,
         default=False,
@@ -87,6 +90,12 @@ def process_options():
         routing_key = options.queue
         exchange_type = "direct"
 
+    # if no explicit exchange parameter was specified, set it to the same as the routing key
+    if options.exchange:
+        exchange = options.exchange
+    else:
+        exchange = routing_key
+
     if options.verbose:
         log_level = logging.DEBUG
     else:
@@ -95,6 +104,7 @@ def process_options():
     return(
         options.broker,
         routing_key,
+        exchange,
         exchange_type,
         options.max_messages,
         options.persistent,
@@ -130,6 +140,7 @@ class Publisher(object):
     def __init__(
         self,
         amqp_url,
+        exchange,
         exchange_type,
         routing_key,
         max_messages,
@@ -154,7 +165,7 @@ class Publisher(object):
         self._stopping = False
         self._url = amqp_url
         self._exchange_type = exchange_type
-        self._exchange = routing_key
+        self._exchange = exchange
         self._routing_key = routing_key
         self._queue = routing_key
         self._max_messages = max_messages
@@ -447,19 +458,20 @@ class Publisher(object):
             return
 
         message = {'sequence':(self._message_number+1)}
+        message_id = uuid.uuid4()
 
         if self._persistent:
             properties = pika.BasicProperties(
                 app_id=os.path.basename(__file__),
                 content_type='application/json',
                 delivery_mode=2, # make message persistent
-                message_id=(str(uuid.uuid4())),
+                message_id=(str(message_id)),
                 timestamp=int(time.time()))
         else:
             properties = pika.BasicProperties(
                 app_id=os.path.basename(__file__),
                 content_type='application/json',
-                message_id=(str(uuid.uuid4())),
+                message_id=(str(message_id)),
                 timestamp=int(time.time()))
 
         self._channel.basic_publish(self._exchange, self._routing_key,
@@ -467,7 +479,7 @@ class Publisher(object):
                                     properties)
         self._message_number += 1
         self._deliveries.append(self._message_number)
-        logging.debug('Published message # %i', self._message_number)
+        logging.info('Published message # %i, id %s', self._message_number, message_id)
 
         if self._message_number < self._max_messages:
             self.schedule_next_message()
@@ -521,7 +533,7 @@ class Publisher(object):
 
 def main():
     start_time = datetime.datetime.now()
-    (broker, routing_key, exchange_type, max_messages, persistent, log_level) = process_options()
+    (broker, routing_key, exchange, exchange_type, max_messages, persistent, log_level) = process_options()
 
     logging.basicConfig(
             level=log_level,
@@ -531,6 +543,7 @@ def main():
 
     conn = Publisher(
         PROTOCOL + broker + CONNECTION_OPTIONS,
+        exchange,
         exchange_type,
         routing_key,
         max_messages,
