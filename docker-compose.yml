@@ -15,26 +15,27 @@ services:
             - activemq-vol:/mnt/nfs-share/activemq
 
     rabbitmq:
-        build:
-            context: ./rabbitmq
-            dockerfile: Dockerfile-rabbitmq
+        image: rabbitmq:3-management
+#        build:
+#            context: ./rabbitmq
+#            dockerfile: Dockerfile
         container_name: rabbitmq_1
         environment:
+            - RABBITMQ_CONFIG_FILE=/mnt/rabbitmq/config/rabbitmq.config
             - RABBITMQ_DEFAULT_USER=user
             - RABBITMQ_DEFAULT_PASS=user
-            - RABBITMQ_MNESIA_BASE=/data/mnesia
-            - RABBITMQ_LOG_BASE=/data/log
+            - RABBITMQ_MNESIA_BASE=/mnt/rabbitmq/data/mnesia
+            - RABBITMQ_LOG_BASE=/mnt/rabbitmq/data/log
         ports:
             - "5672:5672"
             - "8080:15672"
         volumes:
-            - rabbitmq-data-vol:/data/mnesia
-            - rabbitmq-log-vol:/data/log
+            - rabbitmq-vol:/mnt/rabbitmq/data
+            - ./rabbitmq/:/mnt/rabbitmq/config/
+#        command:  bash -c "sleep 10; rabbitmq-server;"
 
 volumes:
     activemq-vol:
         driver: local
-    rabbitmq-data-vol:
-        driver: local
-    rabbitmq-log-vol:
+    rabbitmq-vol:
         driver: local
