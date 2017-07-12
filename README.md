@@ -1,4 +1,4 @@
-# AMQP ActiveMQ Python Go
+# AMQP Python Go
 
 I needed to set up an environment wherein I could demonstrate and investigate ActiveMQ, RabbitMQ, AMQP, clustering, failover, etc and connect from clients written in both Python and Go.
 
