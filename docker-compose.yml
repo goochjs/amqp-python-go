@@ -15,13 +15,13 @@ services:
             - activemq-vol:/mnt/nfs-share/activemq
 
     rabbitmq:
-        image: rabbitmq:3-management
-#        build:
-#            context: ./rabbitmq
-#            dockerfile: Dockerfile
+#        image: rabbitmq:3-management
+        build:
+            context: ./rabbitmq
+            dockerfile: Dockerfile
         container_name: rabbitmq_1
         environment:
-            - RABBITMQ_CONFIG_FILE=/mnt/rabbitmq/config/rabbitmq.config
+#            - RABBITMQ_CONFIG_FILE=/mnt/rabbitmq/config/rabbitmq.config
             - RABBITMQ_DEFAULT_USER=user
             - RABBITMQ_DEFAULT_PASS=user
             - RABBITMQ_MNESIA_BASE=/mnt/rabbitmq/data/mnesia

@@ -1,47 +1,77 @@
 {
-  "rabbit_version": "3.6.10",
-  "users": [
-    {
-      "name": "jeremy",
-      "password_hash": "SKY1UOTubHA2cOREUgyfEyJoAzY0R0H9z1qYwitBLXfswMlo",
-      "hashing_algorithm": "rabbit_password_hashing_sha256",
-      "tags": "administrator"
-    }
-  ],
-  "vhosts": [
-    {
-      "name": "/"
-    }
-  ],
-  "permissions": [
-    {
-      "user": "jeremy",
-      "vhost": "/",
-      "configure": ".*",
-      "write": ".*",
-      "read": ".*"
-    }
-  ],
-  "parameters": [],
-  "global_parameters": [
-    { }
-  ],
-  "policies": [],
-  "queues": [
-    {}
-  ],
-  "exchanges": [
-    {
-      "name": "argos.logistics",
-      "vhost": "/",
-      "type": "direct",
-      "durable": true,
-      "auto_delete": false,
-      "internal": false,
-      "arguments": {}
-    }
-  ],
-  "bindings": [
-    {}
-  ]
+    "rabbit_version": "3.6.10",
+    "users": [
+        {
+            "name": "jeremy",
+            "password_hash": "sKebV+NRmbEQRkrjBejHrTkzp7ga9c+foHEfoyEFvXuQvY9k",
+            "hashing_algorithm": "rabbit_password_hashing_sha256",
+            "tags": "standard user"
+        }
+    ],
+    "vhosts": [
+        {
+            "name": "/"
+        }
+    ],
+    "permissions": [
+        {
+            "user": "jeremy",
+            "vhost": "/",
+            "configure": "",
+            "write": ".*",
+            "read": ".*"
+        }
+    ],
+    "parameters": [],
+    "global_parameters": [],
+    "policies": [
+        {
+          "vhost": "/",
+          "name": "DLX",
+          "pattern": ".*",
+          "apply-to": "queues",
+          "definition": {
+            "dead-letter-exchange": "DLX"
+          },
+          "priority": 0
+        }
+    ],
+    "queues": [
+        {
+            "name": "DLQ",
+            "vhost": "/",
+            "durable": true,
+            "auto_delete": false,
+            "arguments": {}
+        }
+    ],
+    "exchanges": [
+        {
+            "name": "some.exchange",
+            "vhost": "/",
+            "type": "direct",
+            "durable": true,
+            "auto_delete": false,
+            "internal": false,
+            "arguments": {}
+        },
+        {
+            "name": "DLX",
+            "vhost": "/",
+            "type": "fanout",
+            "durable": true,
+            "auto_delete": false,
+            "internal": false,
+            "arguments": {}
+        }
+    ],
+    "bindings": [
+        {
+            "source": "DLX",
+            "vhost": "/",
+            "destination": "DLQ",
+            "destination_type": "queue",
+            "arguments": {}
+        }
+    ]
 }

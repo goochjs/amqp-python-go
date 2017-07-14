@@ -1,22 +1,14 @@
 FROM rabbitmq:3-management
 
-#USER root
+# install the admin tool (which is a Python script)
+RUN apt-get update
+RUN apt-get install -y python
+ADD https://raw.githubusercontent.com/rabbitmq/rabbitmq-management/rabbitmq_v3_6_10/bin/rabbitmqadmin /usr/local/bin/rabbitmqadmin
+RUN chmod 755 /usr/local/bin/rabbitmqadmin
 
-# Create the directories for the persistence and log stores
-#RUN mkdir -p /data/rabbitmq && \
-#    chown rabbitmq:rabbitmq /data/rabbitmq
-#RUN mkdir -p /data/mnesia && \
-#    chown rabbitmq:rabbitmq /data/mnesia
-#RUN mkdir -p /data/log && \
-#    chown rabbitmq:rabbitmq /data/log
-
-# Copy config to the container
-#COPY ./rabbitmq.config /data/rabbitmq/config/rabbitmq.config
-#COPY ./rabbitmq-defs.json /data/rabbitmq/config/rabbitmq-defs.json
-#RUN chown -R rabbitmq:rabbitmq /data/rabbitmq/config
-#RUN chmod -R 644 /data/rabbitmq/config
-
-#USER rabbitmq
+# import the definitions
+#CMD /usr/local/bin/rabbitmqadmin -u user -p user -q import /mnt/rabbitmq/config/rabbitmq-defs.json
 
 # Load plug-ins
 #RUN rabbitmq-plugins enable rabbitmq_amqp1_0
+RUN rabbitmq-plugins enable --offline rabbitmq_shovel && rabbitmq-plugins enable --offline rabbitmq_shovel_management
