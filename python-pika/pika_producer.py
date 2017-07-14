@@ -171,6 +171,7 @@ class Publisher(object):
         self._max_messages = max_messages
         self._persistent = persistent
         self._closing = False
+        self._create_exchange = True
 
 
     def connect(self):
@@ -298,8 +299,16 @@ class Publisher(object):
 
         """
         logging.warning('Channel was closed: (%s) %s', reply_code, reply_text)
-        if not self._closing:
-            self._connection.close()
+
+        # if it's failing because it tried to declare an exchange but one already
+        # existed with the same name but different parameters then continue
+        if reply_code == 406:
+            logging.debug("Exchange %s already exists", self._exchange)
+            self._create_exchange=False
+            self.open_channel()
+        else:
+            if not self._closing:
+                self._connection.close()
 
 
     def setup_exchange(self, exchange_name):
@@ -310,12 +319,20 @@ class Publisher(object):
         :param str|unicode exchange_name: The name of the exchange to declare
 
         """
-        logging.debug('Declaring exchange %s', exchange_name)
-        self._channel.exchange_declare(self.on_exchange_declareok,
-                                       exchange_name,
-                                       self._exchange_type,
-                                       False,
-                                       True)
+        if self._create_exchange:
+            logging.debug('Declaring exchange %s', exchange_name)
+            self._channel.exchange_declare(
+                callback=self.on_exchange_declareok,
+                exchange=exchange_name,
+                type=self._exchange_type,
+                durable=True,
+                passive=False)
+        else:
+            if self._exchange_type == "direct":
+                self.setup_queue(self._queue)
+            else:
+                self.start_publishing()
+
 
 
     def on_exchange_declareok(self, unused_frame):
@@ -325,7 +342,7 @@ class Publisher(object):
         :param pika.Frame.Method unused_frame: Exchange.DeclareOk response frame
 
         """
-        logging.debug('Exchange declared')
+        logging.debug('Exchange declared %s', unused_frame)
 
         # if it's a direct exchange, then create the queue
         # otherwise, it must be a pub/sub pattern so start publishing
