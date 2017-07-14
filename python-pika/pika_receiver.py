@@ -368,6 +368,12 @@ class Consumer(object):
         logging.debug('Acknowledging message %s', basic_deliver.delivery_tag)
         self._channel.basic_ack(basic_deliver.delivery_tag)
 
+        # the following code can be uncommented in place of the ack above
+        # in order to test dead letter processing
+        #self._channel.basic_nack(
+        #    delivery_tag=basic_deliver.delivery_tag,
+        #    requeue=False)
+
         self._count += 1
 
         if self._count == self._max_messages:
