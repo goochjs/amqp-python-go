@@ -2,12 +2,16 @@
     "rabbit_version": "3.6.10",
     "users": [
         {
+            "name": "user",
+            "password": "user",
+            "tags": "administrator"
+        },
+        {
             "name": "jeremy",
-            "password_hash": "sKebV+NRmbEQRkrjBejHrTkzp7ga9c+foHEfoyEFvXuQvY9k",
+            "password_hash": "OTE4ODZiNmNkZDQwOGI4NjkyZDU3ZmRhYTIwZDdlMWRmOTc3ZTNkNzkwNjVkNGFkYjY3NTlmOWM1MTJkYTAzODUwNzk2MjVl",
             "hashing_algorithm": "rabbit_password_hashing_sha256",
-            "tags": "standard user"
-        }
-    ],
+            "tags": "monitoring"
+        }    ],
     "vhosts": [
         {
             "name": "/"
@@ -15,9 +19,16 @@
     ],
     "permissions": [
         {
+            "user": "user",
+            "vhost": "/",
+            "configure": ".*",
+            "write": ".*",
+            "read": ".*"
+        },
+        {
             "user": "jeremy",
             "vhost": "/",
-            "configure": "",
+            "configure": "^some\\..*",
             "write": ".*",
             "read": ".*"
         }
@@ -32,6 +43,16 @@
           "apply-to": "queues",
           "definition": {
             "dead-letter-exchange": "DLX"
+          },
+          "priority": 0
+        },
+        {
+          "vhost": "/",
+          "name": "ha-all",
+          "pattern": ".*",
+          "apply-to": "all",
+          "definition": {
+            "ha-mode": "all"
           },
           "priority": 0
         }
