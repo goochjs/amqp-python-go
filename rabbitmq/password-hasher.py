@@ -61,7 +61,7 @@ def process_options():
 
 def hextrim(binary_thing):
     # extract just the hex bit of a binary representation
-    # TODO - there must be a neater way to do this bit!
+    # TODO - there must be a neater way to do this bit rather than string slicing!
     hex_end=len(str(binary_thing))-1
     return str(binary_thing)[2:hex_end]
 

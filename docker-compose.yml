@@ -2,11 +2,11 @@ version: '2'
 
 services:
     activemq:
+        image: activemq
         build:
             context: ./activemq
             dockerfile: Dockerfile
         container_name: activemq_1
-        image: activemq
         ports:
             - "5672:5672"
             - "61616:61616"
@@ -15,15 +15,16 @@ services:
             - activemq-vol:/mnt/nfs-share/activemq
 
     rabbitmq:
-#        image: rabbitmq:3-management
         build:
             context: ./rabbitmq
             dockerfile: Dockerfile
+            args:
+                SSL_PASSWORD: password
         container_name: rabbitmq_1
         environment:
 #            - RABBITMQ_CONFIG_FILE=/mnt/rabbitmq/config/rabbitmq.config
-            - RABBITMQ_DEFAULT_USER=user
-            - RABBITMQ_DEFAULT_PASS=user
+            - RABBITMQ_DEFAULT_USER=admin
+            - RABBITMQ_DEFAULT_PASS=password
             - RABBITMQ_MNESIA_BASE=/mnt/rabbitmq/data/mnesia
             - RABBITMQ_LOG_BASE=/mnt/rabbitmq/data/log
         ports:
@@ -32,7 +33,6 @@ services:
         volumes:
             - rabbitmq-vol:/mnt/rabbitmq/data
             - ./rabbitmq/:/mnt/rabbitmq/config/
-#        command:  bash -c "sleep 10; rabbitmq-server;"
 
 volumes:
     activemq-vol:
