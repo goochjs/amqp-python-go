@@ -66,19 +66,18 @@ def process_options():
     if not(checkConnection):
         opts.error("The broker connection string looks a bit dodgy.  It should be something like 'localhost:5672'")
 
-    # check that one and only one of topic or queue was specified
-    if options.topic and options.queue:
-        opts.error("You may only specify either a queue or a topic")
-    if not(options.topic) and not(options.queue):
-        opts.error("You must specify either a queue or a topic")
-
-    # add the correct internal protocol
+    # set up the queue name and binding key
     if options.topic:
         binding_key = options.topic
-        exchange_type = "topic"
+
+        # if no queue provided then set the queue name to the same as the topic
+        if options.queue:
+            queue_name = options.queue
+        else:
+            queue_name = options.topic
     else:
         binding_key = options.queue
-        exchange_type = "direct"
+        queue_name = options.queue
 
     # if no explicit exchange parameter was specified, set it to the same as the binding key
     if options.exchange:
@@ -94,8 +93,8 @@ def process_options():
     return(
         options.broker,
         exchange,
-        exchange_type,
         binding_key,
+        queue_name,
         options.max_messages,
         log_level)
 
@@ -124,12 +123,11 @@ class Consumer(object):
 
     """
 
-    def __init__(self, amqp_url, exchange, exchange_type, binding_key, max_messages):
+    def __init__(self, amqp_url, exchange, binding_key, queue_name, max_messages):
         """Create a new instance of the consumer class, passing in the AMQP
         URL used to connect to RabbitMQ.
 
         :param str amqp_url: The AMQP url to connect with
-        :param str exchange_type: "direct" or "topic"
         :param str binding_key: The name of the binding key
 
         """
@@ -140,7 +138,7 @@ class Consumer(object):
         self._url = amqp_url
         self._binding_key = binding_key
         self._exchange = exchange
-        self._queue = binding_key
+        self._queue = queue_name
         self._max_messages = max_messages
         self._count = 0
         self._first_message_time = datetime.datetime.now()
@@ -459,7 +457,7 @@ class Consumer(object):
 
 def main():
     start_time = datetime.datetime.now()
-    (broker, exchange, exchange_type, binding_key, max_messages, log_level) = process_options()
+    (broker, exchange, binding_key, queue_name, max_messages, log_level) = process_options()
 
     logging.basicConfig(
             level=log_level,
@@ -470,8 +468,8 @@ def main():
     conn = Consumer(
             PROTOCOL + broker + CONNECTION_OPTIONS,
             exchange,
-            exchange_type,
             binding_key,
+            queue_name,
             max_messages
         )
 
