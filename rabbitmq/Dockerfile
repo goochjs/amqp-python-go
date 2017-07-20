@@ -1,4 +1,4 @@
-FROM rabbitmq:3-management
+FROM rabbitmq:3.6.6
 ARG SSL_PASSWORD
 
 USER root
@@ -8,10 +8,6 @@ RUN apt-get update
 RUN apt-get install -y python
 ADD https://raw.githubusercontent.com/rabbitmq/rabbitmq-management/rabbitmq_v3_6_10/bin/rabbitmqadmin /usr/local/bin/rabbitmqadmin
 RUN chmod 755 /usr/local/bin/rabbitmqadmin
-
-# Bring in our configuration
-COPY rabbitmq.config /etc/rabbitmq/rabbitmq.config
-RUN chown rabbitmq:rabbitmq /etc/rabbitmq/rabbitmq.config && chmod 644 /etc/rabbitmq/rabbitmq.config
 
 # set up SSL
 RUN apt-get install openssl -y  \
@@ -55,9 +51,17 @@ RUN cd /home/ssl/client \
     && openssl pkcs12 -export -out key-store.p12 -in cert.pem -inkey key.pem -passout pass:$SSL_PASSWORD \
     && openssl pkcs12 -export -out trust-store.p12 -in /home/ssl/ca/cacert.pem -inkey /home/ssl/ca/private/cakey.pem -passout pass:$SSL_PASSWORD
 
+# Bring in our RabbitMQ configuration file
+COPY rabbitmq.config /etc/rabbitmq/rabbitmq.config
+RUN chown rabbitmq:rabbitmq /etc/rabbitmq/rabbitmq.config && chmod 444 /etc/rabbitmq/rabbitmq.config
+
 USER rabbitmq
 
 # Load plug-ins
-RUN rabbitmq-plugins enable --offline rabbitmq_shovel \
+RUN rabbitmq-plugins enable --offline rabbitmq_management \
+    && rabbitmq-plugins enable --offline rabbitmq_shovel \
     && rabbitmq-plugins enable --offline rabbitmq_shovel_management \
-    && rabbitmq-plugins enable rabbitmq_auth_mechanism_ssl
+    && rabbitmq-plugins enable --offline rabbitmq_auth_mechanism_ssl
+
+# Launch the message broker
+CMD rabbitmq-server

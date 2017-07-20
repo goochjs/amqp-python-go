@@ -9,6 +9,12 @@ Created on 4th July 2017
     Execute script with -h parameter for usage
 '''
 
+# --- CONSTANTS --------------------------------------------------------------
+
+PROTOCOL = "amqp://"
+CONNECTION_OPTIONS = "/%2F?connection_attempts=3&heartbeat_interval=3600"
+
+
 # --- LIBRARIES --------------------------------------------------------------
 
 import sys
@@ -462,7 +468,7 @@ def main():
     logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Started")
 
     conn = Consumer(
-            'amqp://user:user@localhost:5672/%2F',
+            PROTOCOL + broker + CONNECTION_OPTIONS,
             exchange,
             exchange_type,
             binding_key,
