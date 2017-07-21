@@ -293,7 +293,7 @@ class Consumer(object):
         :param pika.frame.Method method_frame: The Queue.DeclareOk frame
 
         """
-        logging.debug('Binding %s to %s with %s',
+        logging.info('Binding %s to %s with %s',
                     self._exchange, self._queue, self._binding_key)
         self._channel.queue_bind(self.on_bindok, self._queue,
                                  self._exchange, self._binding_key)
@@ -367,7 +367,7 @@ class Consumer(object):
         if self._count == 0:
             self._first_message_time = datetime.datetime.now()
 
-        logging.info("Message received %s %s %s", properties, basic_deliver, body)
+        logging.debug("Message received %s %s %s", properties, basic_deliver, body)
 
         logging.debug('Acknowledging message %s', basic_deliver.delivery_tag)
         self._channel.basic_ack(basic_deliver.delivery_tag)
@@ -384,7 +384,10 @@ class Consumer(object):
             self.stop()
 
             message_processing_time = datetime.datetime.now() - self._first_message_time
-            logging.info("%s messages received in %s", self._count, message_processing_time)
+            logging.info("%s messages received in %s (%s/s)",
+                self._count,
+                message_processing_time,
+                round(self._count/message_processing_time.total_seconds(), 2))
             logging.debug("Disconnected from %s", clean_url(self._url))
 
 

@@ -377,7 +377,7 @@ class Publisher(object):
         :param pika.frame.Method method_frame: The Queue.DeclareOk frame
 
         """
-        logging.debug('Binding %s to %s with %s',
+        logging.info('Binding %s to %s with %s',
                     self._exchange, self._queue, self._routing_key)
         self._channel.queue_bind(self.on_bindok, self._queue,
                                  self._exchange, self._routing_key)
@@ -496,7 +496,7 @@ class Publisher(object):
                                     properties)
         self._message_number += 1
         self._deliveries.append(self._message_number)
-        logging.info('Published message # %i, id %s', self._message_number, message_id)
+        logging.debug('Published message # %i, id %s', self._message_number, message_id)
 
         if self._message_number < self._max_messages:
             self.schedule_next_message()
@@ -571,7 +571,10 @@ def main():
         try:
             conn.run()
             exec_time = datetime.datetime.now() - start_time
-            logging.info(str(max_messages) + " messages sent in " + str(exec_time))
+            logging.info("%s messages sent in %s (%s/s)",
+                max_messages,
+                exec_time,
+                round(max_messages/exec_time.total_seconds(), 2))
         except KeyboardInterrupt:
             logging.info("Keyboard interrupt received")
             conn.stop()
