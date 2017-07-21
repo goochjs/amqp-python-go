@@ -381,13 +381,14 @@ class Consumer(object):
         self._count += 1
 
         if self._count == self._max_messages:
-            self.stop()
-
             message_processing_time = datetime.datetime.now() - self._first_message_time
             logging.info("%s messages received in %s (%s/s)",
                 self._count,
                 message_processing_time,
                 round(self._count/message_processing_time.total_seconds(), 2))
+
+            self.stop()
+
             logging.debug("Disconnected from %s", clean_url(self._url))
 
 
@@ -485,7 +486,7 @@ def main():
         raise e
 
     exec_time = datetime.datetime.now() - start_time
-    logging.debug("Execution time " + str(exec_time))
+    logging.info("Execution time %s", exec_time)
     logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Finished")
 
 

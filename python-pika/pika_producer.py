@@ -471,6 +471,9 @@ class Publisher(object):
         class.
 
         """
+        if self._message_number == 0:
+            self._first_message_time = datetime.datetime.now()
+
         if self._stopping:
             return
 
@@ -501,6 +504,11 @@ class Publisher(object):
         if self._message_number < self._max_messages:
             self.schedule_next_message()
         else:
+            message_processing_time = datetime.datetime.now() - self._first_message_time
+            logging.info("%s messages sent in %s (%s/s)",
+                self._max_messages,
+                message_processing_time,
+                round(self._max_messages/message_processing_time.total_seconds(), 2))
             self.stop()
 
 
@@ -570,17 +578,14 @@ def main():
     if max_messages > 0:
         try:
             conn.run()
-            exec_time = datetime.datetime.now() - start_time
-            logging.info("%s messages sent in %s (%s/s)",
-                max_messages,
-                exec_time,
-                round(max_messages/exec_time.total_seconds(), 2))
         except KeyboardInterrupt:
             logging.info("Keyboard interrupt received")
             conn.stop()
         except Exception as e:
             raise e
 
+    exec_time = datetime.datetime.now() - start_time
+    logging.info("Execution time %s", exec_time)
     logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Finished")
 
 
