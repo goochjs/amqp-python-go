@@ -49,6 +49,9 @@ def process_options():
         help="send log messages to sysout")
     options = opts.parse_args()
 
+    if not options.input_string:
+        opts.error("Input string required")
+        
     if options.verbose:
         log_level = logging.DEBUG
     else:
