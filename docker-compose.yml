@@ -22,11 +22,7 @@ services:
                 SSL_PASSWORD: password
         container_name: rabbitmq_1
         environment:
-            #- RABBITMQ_CONFIG_FILE=/mnt/rabbitmq/config/rabbitmq.config
-            - RABBITMQ_DEFAULT_USER=admin
-            - RABBITMQ_DEFAULT_PASS=password
             - RABBITMQ_MNESIA_BASE=/mnt/rabbitmq/data/mnesia
-            - RABBITMQ_LOG_BASE=/mnt/rabbitmq/data/log
         ports:
             - "5671:5671"
             - "5672:5672"
