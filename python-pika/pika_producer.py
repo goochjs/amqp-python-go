@@ -11,7 +11,6 @@ Created on 9th June 2017
 
 # --- CONSTANTS --------------------------------------------------------------
 
-PROTOCOL = "amqp://"
 CONNECTION_OPTIONS = "/%2F?connection_attempts=3&heartbeat_interval=3600"
 
 
@@ -72,9 +71,9 @@ def process_options():
     options = opts.parse_args()
 
     # Check that the connection string looks sensible
-    checkConnection = re.match('(.*):\d{1,5}', options.broker, )
+    checkConnection = re.match('amqp(s?):\/\/(.*):\d{1,5}$', options.broker, )
     if not(checkConnection):
-        opts.error("The broker connection string looks a bit dodgy.  It should be something like 'localhost:5672'")
+        opts.error("The broker connection string looks a bit dodgy.  It should be something like 'amqp://localhost:5672'")
 
     # check that one and only one of topic or queue was specified
     if options.topic and options.queue:
@@ -82,7 +81,7 @@ def process_options():
     if not(options.topic) and not(options.queue):
         opts.error("You must specify either a queue or a topic")
 
-    # add the correct internal protocol
+    # add the correct exchange type
     if options.topic:
         routing_key = options.topic
         exchange_type = "topic"
@@ -567,7 +566,7 @@ def main():
     logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Started")
 
     conn = Publisher(
-        PROTOCOL + broker + CONNECTION_OPTIONS,
+        broker + CONNECTION_OPTIONS,
         exchange,
         exchange_type,
         routing_key,
