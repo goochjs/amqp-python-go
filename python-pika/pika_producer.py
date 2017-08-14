@@ -29,7 +29,9 @@ import logging
 import os
 
 import pika
+from pika.credentials import ExternalCredentials
 import json
+import ssl
 
 # --- FUNCTIONS --------------------------------------------------------------
 
@@ -184,9 +186,38 @@ class Publisher(object):
 
         """
         logging.debug('Connecting to %s', clean_url(self._url))
-        return pika.SelectConnection(pika.URLParameters(self._url),
-                                     self.on_connection_open,
-                                     stop_ioloop_on_close=False)
+
+        if self._url[:5] == "amqps":
+            # set up SSL connection
+            cacertfile = "/usr/src/python-pika/cacert.pem"
+            certfile = "/usr/src/python-pika/cert.pem"
+            keyfile = "/usr/src/python-pika/key.pem"
+
+            for f in [cacertfile, certfile, keyfile]:
+                if not os.path.isfile(f):
+                    raise Exception(f + " does not exist")
+
+            ssl_options = ({"ca_certs": cacertfile,
+                    "certfile": certfile,
+                    "keyfile": keyfile,
+                    "cert_reqs": ssl.CERT_REQUIRED,
+                    "server_side": False})
+
+            params = pika.ConnectionParameters(
+                    host="localhost",
+                    port=5671,
+                    credentials=ExternalCredentials(),
+                    ssl=True,
+                    ssl_options=ssl_options)
+
+            return pika.SelectConnection(params,
+                                    self.on_connection_open,
+                                    stop_ioloop_on_close=False)
+        else:
+            # set up non-SSL connection
+            return pika.SelectConnection(pika.URLParameters(self._url),
+                                    self.on_connection_open,
+                                    stop_ioloop_on_close=False)
 
 
     def on_connection_open(self, unused_connection):
