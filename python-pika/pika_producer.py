@@ -200,8 +200,7 @@ class Publisher(object):
             ssl_options = ({"ca_certs": cacertfile,
                     "certfile": certfile,
                     "keyfile": keyfile,
-                    "cert_reqs": ssl.CERT_REQUIRED,
-                    "server_side": False})
+                    "cert_reqs": ssl.CERT_REQUIRED})
 
             params = pika.ConnectionParameters(
                     host="localhost",
