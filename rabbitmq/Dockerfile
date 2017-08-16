@@ -12,6 +12,9 @@ RUN chmod 755 /usr/local/bin/rabbitmqadmin
 COPY rabbitmq.config /etc/rabbitmq/rabbitmq.config
 RUN chown rabbitmq:rabbitmq /etc/rabbitmq/rabbitmq.config && chmod 444 /etc/rabbitmq/rabbitmq.config
 
+# initialise the transaction log directory
+RUN mkdir -p /mnt/rabbitmq/data/mnesia && chown rabbitmq:rabbitmq /mnt/rabbitmq/data/mnesia
+
 USER rabbitmq
 
 # Load plug-ins

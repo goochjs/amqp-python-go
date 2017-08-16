@@ -189,9 +189,9 @@ class Publisher(object):
 
         if self._url[:5] == "amqps":
             # set up SSL connection
-            cacertfile = "/usr/src/python-pika/cacert.pem"
-            certfile = "/usr/src/python-pika/cert.pem"
-            keyfile = "/usr/src/python-pika/key.pem"
+            cacertfile = "/mnt/ssl/ca/cacert.pem"
+            certfile = "/mnt/ssl/client/cert.pem"
+            keyfile = "/mnt/ssl/client/key.pem"
 
             for f in [cacertfile, certfile, keyfile]:
                 if not os.path.isfile(f):

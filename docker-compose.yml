@@ -18,8 +18,6 @@ services:
         build:
             context: ./rabbitmq
             dockerfile: Dockerfile
-            args:
-                SSL_PASSWORD: password
         container_name: rabbitmq_1
         depends_on:
             - ssl-gen

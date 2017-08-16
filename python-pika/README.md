@@ -16,7 +16,7 @@ This client will connect to a broker and declare an exchange.  If a queue has be
 
 This client will connect to a broker and attempt to connect to an exchange.  Once connected, it will declare a queue (if not already in existence) and connect to it using a binding key of the same name (NB it expects the exchange to have the same name also).  It will then start to consume messages.
 
-    python pika_receiver.py -b user:user@localhost:5672 -q some.queue -m 10 -v
+    python pika_receiver.py -b amqp://user:user@localhost:5672 -q some.queue -m 10 -v
 
 
 ## Docker
@@ -25,6 +25,8 @@ This client will connect to a broker and attempt to connect to an exchange.  Onc
 
     docker build -t pika-receiver -f ./Dockerfile-receiver .
 
-    docker run -it --rm --name pika-producer_1 --network container:rabbitmq_1 pika-producer -b user:user@localhost:5672 -q some.queue -m 10 -vp
+    docker run -it --rm -v amqppythongo_ssl-vol:/mnt/ssl --name pika-producer_1 --network container:rabbitmq_1 pika-producer -b amqps://user:user@localhost:5671 -q some.queue -m 10 -vp
 
-    docker run -it --rm --name pika-receiver_1 --network container:rabbitmq_1 pika-receiver -b user:user@localhost:5672 -q some.queue -m 0 -v
+    docker run -it --rm --name pika-receiver_1 --network container:rabbitmq_1 pika-receiver -b amqp://user:user@localhost:5672 -q some.queue -m 0 -v
+
+Note that, in order to use SSL, the certificates and keys are mounted from a shared Docker volume ("amqppythongo_ssl-vol").  This is created by the ssl-gen container, which can be found under this overall project.
