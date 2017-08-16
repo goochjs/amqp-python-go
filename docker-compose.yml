@@ -21,6 +21,8 @@ services:
             args:
                 SSL_PASSWORD: password
         container_name: rabbitmq_1
+        depends_on:
+            - ssl-gen
         environment:
             - RABBITMQ_MNESIA_BASE=/mnt/rabbitmq/data/mnesia
         ports:
@@ -29,10 +31,25 @@ services:
             - "8080:15672"
         volumes:
             - rabbitmq-vol:/mnt/rabbitmq/data
+            - ssl-vol:/mnt/ssl
             - ./rabbitmq/:/mnt/rabbitmq/config/
+
+    ssl-gen:
+        build:
+            context: ./ssl-gen
+            dockerfile: Dockerfile
+        container_name: ssl-gen_1
+        environment:
+            - SSL_PASSWORD=password
+            - SERVER_SUBJ=/CN=rabbitmq/O=server/
+            - CLIENT_SUBJ=/CN=rabbitmq/O=client/
+        volumes:
+            - ssl-vol:/mnt/ssl
 
 volumes:
     activemq-vol:
         driver: local
     rabbitmq-vol:
+        driver: local
+    ssl-vol:
         driver: local

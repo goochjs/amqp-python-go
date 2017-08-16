@@ -1,8 +1,8 @@
 [ ca ]
-default_ca = rabbitca
+default_ca = ssl-gen_ca
 
-[ rabbitca ]
-dir = /home/ssl/ca
+[ ssl-gen_ca ]
+dir = /mnt/ssl/ca
 certificate = $dir/cacert.pem
 database = $dir/index.txt
 new_certs_dir = $dir/certs
@@ -13,10 +13,10 @@ default_crl_days = 7
 default_days = 365
 default_md = sha256
 
-policy = rabbitca_policy
+policy = ssl-gen_ca_policy
 x509_extensions = certificate_extensions
 
-[ rabbitca_policy ]
+[ ssl-gen_ca_policy ]
 commonName = supplied
 stateOrProvinceName = optional
 countryName = optional
