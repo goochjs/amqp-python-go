@@ -25,7 +25,7 @@ This client will connect to a broker and attempt to connect to an exchange.  Onc
 
     docker build -t pika-receiver -f ./Dockerfile-receiver .
 
-    docker run -it --rm -v amqppythongo_ssl-vol:/mnt/ssl --name pika-producer_1 --network container:rabbitmq_1 pika-producer -b amqps://user:user@localhost:5671 -q some.queue -m 10 -vp
+    docker run -it --rm -v amqppythongo_ssl-vol:/mnt/ssl --name pika-producer_1 --network container:rabbitmq_1 pika-producer -b amqps://localhost:5671 -q some.queue -m 10 -vp
 
     docker run -it --rm --name pika-receiver_1 --network container:rabbitmq_1 pika-receiver -b amqp://user:user@localhost:5672 -q some.queue -m 0 -v
 

@@ -13,6 +13,10 @@ Created on 9th June 2017
 
 CONNECTION_OPTIONS = "/%2F?connection_attempts=3&heartbeat_interval=3600"
 
+CACERTFILE = "/mnt/ssl/ca/cacert.pem"
+CERTFILE   = "/mnt/ssl/client/cert.pem"
+KEYFILE    = "/mnt/ssl/client/key.pem"
+
 
 # --- LIBRARIES --------------------------------------------------------------
 
@@ -32,6 +36,7 @@ import pika
 from pika.credentials import ExternalCredentials
 import json
 import ssl
+from urllib.parse import urlparse
 
 # --- FUNCTIONS --------------------------------------------------------------
 
@@ -44,7 +49,7 @@ def process_options():
 
     opts.add_argument("--broker", "-b",
         required=False,
-        default="localhost:5672",
+        default="amqp://localhost:5672",
         help="broker connection string")
     opts.add_argument("--exchange", "-e",
         required=False,
@@ -187,24 +192,24 @@ class Publisher(object):
         """
         logging.debug('Connecting to %s', clean_url(self._url))
 
-        if self._url[:5] == "amqps":
-            # set up SSL connection
-            cacertfile = "/mnt/ssl/ca/cacert.pem"
-            certfile = "/mnt/ssl/client/cert.pem"
-            keyfile = "/mnt/ssl/client/key.pem"
+        # pull the url apart
+        parsed_url = urlparse(self._url)
 
-            for f in [cacertfile, certfile, keyfile]:
+        if parsed_url.scheme == "amqps":
+            for f in [CACERTFILE, CERTFILE, KEYFILE]:
                 if not os.path.isfile(f):
                     raise Exception(f + " does not exist")
 
-            ssl_options = ({"ca_certs": cacertfile,
-                    "certfile": certfile,
-                    "keyfile": keyfile,
+            # set up SSL connection
+            ssl_options = ({"ca_certs": CACERTFILE,
+                    "certfile": CERTFILE,
+                    "keyfile": KEYFILE,
+                    "ssl_version": ssl.PROTOCOL_TLSv1_2,
                     "cert_reqs": ssl.CERT_REQUIRED})
 
             params = pika.ConnectionParameters(
-                    host="localhost",
-                    port=5671,
+                    host=parsed_url.hostname,
+                    port=parsed_url.port,
                     credentials=ExternalCredentials(),
                     ssl=True,
                     ssl_options=ssl_options)

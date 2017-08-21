@@ -31,3 +31,13 @@ From the project root folder...
     docker-compose up --build rabbitmq
 
 This will create and run a container called `rabbitmq_1`.
+
+### ssl-gen
+
+This module creates a set of self-signed client and server certificates and keys, placing them into a reusable Docker volume.
+
+The RabbitMQ Docker Compose service and the Python Pika scripts use this to provide example code for encryption and client authentication.
+
+The service can be called independently, if desired.  It will start up, generate the keys and certs, and a volume to hold them, and then shut down.
+
+    docker-compose up --build ssl-gen
