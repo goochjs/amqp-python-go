@@ -13,6 +13,10 @@ Created on 4th July 2017
 
 CONNECTION_OPTIONS = "/%2F?connection_attempts=3&heartbeat_interval=3600"
 
+CACERTFILE = "/mnt/ssl/ca/cacert.pem"
+CERTFILE   = "/mnt/ssl/client/cert.pem"
+KEYFILE    = "/mnt/ssl/client/key.pem"
+
 
 # --- LIBRARIES --------------------------------------------------------------
 
@@ -21,10 +25,15 @@ if sys.version_info[0] < 3:
     raise Exception("Python 3 or a more recent version is required.")
 
 import argparse
-import logging
 import datetime
 import re
+import logging
+import os
+
 import pika
+from pika.credentials import ExternalCredentials
+import ssl
+from urllib.parse import urlparse
 
 # --- FUNCTIONS --------------------------------------------------------------
 
@@ -37,7 +46,7 @@ def process_options():
 
     opts.add_argument("--broker", "-b",
         required=False,
-        default="localhost:5672",
+        default="amqp://localhost:5672",
         help="broker connection string")
     opts.add_argument("--exchange", "-e",
         required=False,
@@ -153,7 +162,35 @@ class Consumer(object):
 
         """
         logging.debug('Connecting to %s', clean_url(self._url))
-        return pika.SelectConnection(pika.URLParameters(self._url),
+
+        # pull the url apart
+        parsed_url = urlparse(self._url)
+
+        if parsed_url.scheme == "amqps":
+            for f in [CACERTFILE, CERTFILE, KEYFILE]:
+                if not os.path.isfile(f):
+                    raise Exception(f + " does not exist")
+
+            # set up SSL connection
+            ssl_options = ({"ca_certs": CACERTFILE,
+                    "certfile": CERTFILE,
+                    "keyfile": KEYFILE,
+                    "ssl_version": ssl.PROTOCOL_TLSv1_2,
+                    "cert_reqs": ssl.CERT_REQUIRED})
+
+            params = pika.ConnectionParameters(
+                    host=parsed_url.hostname,
+                    port=parsed_url.port,
+                    credentials=ExternalCredentials(),
+                    ssl=True,
+                    ssl_options=ssl_options)
+
+            return pika.SelectConnection(params,
+                                    self.on_connection_open,
+                                    stop_ioloop_on_close=False)
+        else:
+            # set up non-SSL connection
+            return pika.SelectConnection(pika.URLParameters(self._url),
                                      self.on_connection_open,
                                      stop_ioloop_on_close=False)
 
