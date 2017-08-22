@@ -11,8 +11,6 @@ Created on 9th June 2017
 
 # --- CONSTANTS --------------------------------------------------------------
 
-CONNECTION_OPTIONS = "/%2F?connection_attempts=3&heartbeat_interval=3600"
-
 CACERTFILE = "/mnt/ssl/ca/cacert.pem"
 CERTFILE   = "/mnt/ssl/client/cert.pem"
 KEYFILE    = "/mnt/ssl/client/key.pem"
@@ -140,7 +138,8 @@ class Publisher(object):
     messages that have been sent and if they've been confirmed by the broker.
 
     """
-    PUBLISH_INTERVAL = 0
+    PUBLISH_INTERVAL = 0 # number of seconds to wait between publishing messages
+    WAIT_INTERVAL = 20   # number of seconds to wait before retrying connection
 
 
     def __init__(
@@ -212,14 +211,25 @@ class Publisher(object):
                     port=parsed_url.port,
                     credentials=ExternalCredentials(),
                     ssl=True,
-                    ssl_options=ssl_options)
+                    ssl_options=ssl_options,
+                    connection_attempts=10,
+                    heartbeat_interval=3600,
+                    socket_timeout=5)
 
-            return pika.SelectConnection(params,
-                                    self.on_connection_open,
-                                    stop_ioloop_on_close=False)
         else:
             # set up non-SSL connection
-            return pika.SelectConnection(pika.URLParameters(self._url),
+            credentials = pika.PlainCredentials(parsed_url.username, parsed_url.password)
+
+            params = pika.ConnectionParameters(
+                    host=parsed_url.hostname,
+                    port=parsed_url.port,
+                    credentials=credentials,
+                    connection_attempts=100,
+                    heartbeat_interval=3600,
+                    socket_timeout=5)
+
+
+        return pika.SelectConnection(params,
                                     self.on_connection_open,
                                     stop_ioloop_on_close=False)
 
@@ -260,8 +270,8 @@ class Publisher(object):
         if self._closing:
             self._connection.ioloop.stop()
         else:
-            logging.warning('Connection closed, reopening in 5 seconds: (%s) %s',
-                           reply_code, reply_text)
+            logging.warning('Connection closed, reopening in %s seconds: (%s) %s',
+                           self.WAIT_INTERVAL, reply_code, reply_text)
             self._connection.add_timeout(5, self.reconnect)
 
 
@@ -509,6 +519,11 @@ class Publisher(object):
             self._first_message_time = datetime.datetime.now()
 
         if self._stopping:
+            logging.debug("Script is stopping, cannot publish message")
+            return
+
+        if not self._connection.is_open:
+            logging.debug("Connection is not open, cannot publish message")
             return
 
         message = {'sequence':(self._message_number+1)}
@@ -601,7 +616,7 @@ def main():
     logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Started")
 
     conn = Publisher(
-        broker + CONNECTION_OPTIONS,
+        broker,
         exchange,
         exchange_type,
         routing_key,

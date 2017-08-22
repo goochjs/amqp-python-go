@@ -37,23 +37,26 @@
     "policies": [
         {
           "vhost": "/",
-          "name": "DLX",
-          "pattern": ".*",
-          "apply-to": "queues",
-          "definition": {
-            "dead-letter-exchange": "DLX"
-          },
-          "priority": 0
-        },
-        {
-          "vhost": "/",
           "name": "ha-all",
           "pattern": ".*",
           "apply-to": "all",
           "definition": {
-            "ha-mode": "all"
+            "ha-mode": "all",
+            "ha-sync-mode": "automatic"
           },
-          "priority": 0
+          "priority": 1
+      },
+        {
+          "vhost": "/",
+          "name": "ha-and-dlx",
+          "pattern": ".*",
+          "apply-to": "queues",
+          "definition": {
+            "dead-letter-exchange": "DLX",
+            "ha-mode": "all",
+            "ha-sync-mode": "automatic"
+          },
+          "priority": 10
         }
     ],
     "queues": [
