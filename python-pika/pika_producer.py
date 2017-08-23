@@ -138,8 +138,8 @@ class Publisher(object):
     messages that have been sent and if they've been confirmed by the broker.
 
     """
-    PUBLISH_INTERVAL = 0 # number of seconds to wait between publishing messages
-    WAIT_INTERVAL = 20   # number of seconds to wait before retrying connection
+    _PUBLISH_INTERVAL = 0 # number of seconds to wait between publishing messages
+    _WAIT_INTERVAL = 20   # number of seconds to wait before retrying connection
 
 
     def __init__(
@@ -167,6 +167,7 @@ class Publisher(object):
         self._acked = 0
         self._nacked = 0
         self._message_number = 0
+        self._delivery_tag = 0
         self._stopping = False
         self._url = amqp_url
         self._exchange_type = exchange_type
@@ -271,8 +272,8 @@ class Publisher(object):
             self._connection.ioloop.stop()
         else:
             logging.warning('Connection closed, reopening in %s seconds: (%s) %s',
-                           self.WAIT_INTERVAL, reply_code, reply_text)
-            self._connection.add_timeout(5, self.reconnect)
+                           self._WAIT_INTERVAL, reply_code, reply_text)
+            self._connection.add_timeout(self._WAIT_INTERVAL, self.reconnect)
 
 
     def reconnect(self):
@@ -283,7 +284,7 @@ class Publisher(object):
         self._deliveries = []
         self._acked = 0
         self._nacked = 0
-        self._message_number = 0
+        self._delivery_tag = 0
 
         # This is the old connection IOLoop instance, stop its ioloop
         self._connection.ioloop.stop()
@@ -490,15 +491,15 @@ class Publisher(object):
 
     def schedule_next_message(self):
         """If we are not closing our connection to RabbitMQ, schedule another
-        message to be delivered in PUBLISH_INTERVAL seconds.
+        message to be delivered in _PUBLISH_INTERVAL seconds.
 
         """
         if self._stopping:
             return
 
         logging.debug('Scheduling next message for %0.1f seconds',
-                    self.PUBLISH_INTERVAL)
-        self._connection.add_timeout(self.PUBLISH_INTERVAL,
+                    self._PUBLISH_INTERVAL)
+        self._connection.add_timeout(self._PUBLISH_INTERVAL,
                                      self.publish_message)
 
 
@@ -511,7 +512,7 @@ class Publisher(object):
         Once the message has been sent, schedule another message to be sent.
         The main reason I put scheduling in was just so you can get a good idea
         of how the process is flowing by slowing down and speeding up the
-        delivery intervals by changing the PUBLISH_INTERVAL constant in the
+        delivery intervals by changing the _PUBLISH_INTERVAL constant in the
         class.
 
         """
@@ -547,8 +548,12 @@ class Publisher(object):
                                     json.dumps(message, ensure_ascii=False),
                                     properties)
         self._message_number += 1
-        self._deliveries.append(self._message_number)
-        logging.debug('Published message # %i, id %s', self._message_number, message_id)
+        self._delivery_tag += 1
+        self._deliveries.append(self._delivery_tag)
+        logging.debug('Published message # %i, tag %i, id %s',
+                    self._message_number,
+                    self._delivery_tag,
+                    message_id)
 
         if self._message_number < self._max_messages:
             self.schedule_next_message()

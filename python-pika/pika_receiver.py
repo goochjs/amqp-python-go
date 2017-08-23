@@ -11,8 +11,6 @@ Created on 4th July 2017
 
 # --- CONSTANTS --------------------------------------------------------------
 
-CONNECTION_OPTIONS = "/%2F?connection_attempts=3&heartbeat_interval=3600"
-
 CACERTFILE = "/mnt/ssl/ca/cacert.pem"
 CERTFILE   = "/mnt/ssl/client/cert.pem"
 KEYFILE    = "/mnt/ssl/client/key.pem"
@@ -130,6 +128,8 @@ class Consumer(object):
     commands that were issued and that should surface in the output as well.
 
     """
+    _WAIT_INTERVAL = 20   # number of seconds to wait before retrying connection
+
 
     def __init__(self, amqp_url, exchange, binding_key, queue_name, max_messages):
         """Create a new instance of the consumer class, passing in the AMQP
@@ -183,16 +183,26 @@ class Consumer(object):
                     port=parsed_url.port,
                     credentials=ExternalCredentials(),
                     ssl=True,
-                    ssl_options=ssl_options)
+                    ssl_options=ssl_options,
+                    connection_attempts=10,
+                    heartbeat_interval=3600,
+                    socket_timeout=5)
 
-            return pika.SelectConnection(params,
-                                    self.on_connection_open,
-                                    stop_ioloop_on_close=False)
         else:
             # set up non-SSL connection
-            return pika.SelectConnection(pika.URLParameters(self._url),
-                                     self.on_connection_open,
-                                     stop_ioloop_on_close=False)
+            credentials = pika.PlainCredentials(parsed_url.username, parsed_url.password)
+
+            params = pika.ConnectionParameters(
+                    host=parsed_url.hostname,
+                    port=parsed_url.port,
+                    credentials=credentials,
+                    connection_attempts=100,
+                    heartbeat_interval=3600,
+                    socket_timeout=5)
+
+        return pika.SelectConnection(params,
+                                    self.on_connection_open,
+                                    stop_ioloop_on_close=False)
 
 
     def on_connection_open(self, unused_connection):
@@ -231,9 +241,9 @@ class Consumer(object):
         if self._closing:
             self._connection.ioloop.stop()
         else:
-            logging.warning('Connection closed, reopening in 5 seconds: (%s) %s',
-                           reply_code, reply_text)
-            self._connection.add_timeout(5, self.reconnect)
+            logging.warning('Connection closed, reopening in %s seconds: (%s) %s',
+                           self._WAIT_INTERVAL, reply_code, reply_text)
+            self._connection.add_timeout(self._WAIT_INTERVAL, self.reconnect)
 
 
     def reconnect(self):
@@ -506,7 +516,7 @@ def main():
     logging.debug(datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p") + " Started")
 
     conn = Consumer(
-            broker + CONNECTION_OPTIONS,
+            broker,
             exchange,
             binding_key,
             queue_name,
