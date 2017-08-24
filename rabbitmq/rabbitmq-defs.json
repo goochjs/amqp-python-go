@@ -32,11 +32,18 @@
             "read": ".*"
         },
         {
+            "user": "monitor",
+            "vhost": "/",
+            "configure": "",
+            "write": "",
+            "read": ".*"
+        },
+        {
             "user": "some-application",
             "vhost": "/",
             "configure": "^some\\..*",
-            "write": ".*",
-            "read": ".*"
+            "write": "^some\\..*",
+            "read": "^some\\..*"
         }
     ],
     "parameters": [],
