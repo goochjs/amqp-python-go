@@ -7,10 +7,17 @@
             "tags": "administrator"
         },
         {
-            "name": "jeremy",
+            "name": "monitor",
+            "password_hash": "dfvC76mPSc4yyu9GyNLZOaqPMR3y6Atkxm/kND2bBa4mAt5z",
+            "hashing_algorithm": "rabbit_password_hashing_sha256",
+            "tags": "monitoring"
+        },
+        {
+            "name": "some-application",
             "password": "password",
             "tags": "none"
-        }    ],
+        }
+    ],
     "vhosts": [
         {
             "name": "/"
@@ -25,7 +32,7 @@
             "read": ".*"
         },
         {
-            "user": "jeremy",
+            "user": "some-application",
             "vhost": "/",
             "configure": "^some\\..*",
             "write": ".*",

@@ -27,7 +27,7 @@ import base64
 
 
 # --- CONSTANTS --------------------------------------------------------------
-SALT_LENGTH=4
+SALT_LENGTH = 4
 
 
 # --- FUNCTIONS --------------------------------------------------------------
@@ -51,14 +51,14 @@ def process_options():
 
     if not options.input_string:
         opts.error("Input string required")
-        
+
     if options.verbose:
         log_level = logging.DEBUG
     else:
         log_level = logging.INFO
 
     return(
-        options.input_string,
+        options.input_string.encode('utf-8'),
         log_level)
 
 
@@ -80,17 +80,17 @@ def main():
         )
 
     # generate a random hexadecimal salt
-    salt = binascii.hexlify(os.urandom(SALT_LENGTH))
+    salt = os.urandom(SALT_LENGTH)
 
     # concatenate the salt and the input string and hash the result
-    hashed_salted_output = hashlib.sha256(salt + input_string.encode())
+    hashed_salted_output = hashlib.sha256(salt + input_string).digest()
 
     # concatenate the hex salt again and base64 encode it all
-    encoded_output = base64.b64encode((str(hextrim(salt)) + hashed_salted_output.hexdigest()).encode())
+    encoded_output = base64.b64encode(salt + hashed_salted_output)
 
     logging.debug("Input string - %s", input_string)
     logging.debug("Salt - %s", salt)
-    logging.debug("Hashed and salted output - %s", hashed_salted_output.hexdigest())
+    logging.debug("Hashed and salted output - %s", hashed_salted_output)
 
     print(hextrim(encoded_output))
 
